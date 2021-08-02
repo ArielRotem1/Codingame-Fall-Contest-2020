@@ -143,7 +143,7 @@ class Player {
 
     public static int timeToEnd = 50;
     public static int learn = 8;
-    public static boolean haveFreeScr = false;
+    public static int haveFreeScr = 2;
 
     public static int ordersLeftToMe = 6;
     public static int ordersLeftToOpponent = 6;
@@ -277,9 +277,9 @@ class Player {
 
                 System.err.println();*/
 
-                if(!haveFreeScr){
+                if(haveFreeScr > 0){
                     int bestId = -1;
-                    int bestValue = -1;
+                    int bestValue = 1;
                     for (Spell spell : spellsToLearn) {
                         if(spell.tomeIndex > me.ingredients[0]) continue;
                         int[] newIngr = new int[]{0, 0, 0, 0};
@@ -287,7 +287,7 @@ class Player {
                         if(isValidIngredients(newIngr)){
                             int value = 0;
                             for(int i = 0; i < 4; i++){
-                                value += newIngr[i] * values[i];
+                                value += newIngr[i];
                             }
                             if(value > bestValue){
                                 bestValue = value;
@@ -297,38 +297,39 @@ class Player {
                     }
 
                     if(bestId != -1){
-                        haveFreeScr = true;
+                        haveFreeScr--;
                         learn--;
-                        System.err.println("Here");
                         System.out.println("LEARN " + bestId);
                         continue;
                     }
                 }
 
-                int index = whatToLearn(me.ingredients[0]);
-                if(index != -1){
-                    Spell spell = spellsToLearn.get(index);
+                if(learn - haveFreeScr > 0){
+                    int index = whatToLearn(me.ingredients[0]);
+                    if(index != -1){
+                        Spell spell = spellsToLearn.get(index);
 
-                    List<Integer> src = new ArrayList<Integer>();
-                    List<Integer> res = new ArrayList<Integer>();
-                    for(int j = 0; j < 4; j++){
-                        if(spell.ingredients[j] > 0) res.add(j);
-                        else if(spell.ingredients[j] < 0) src.add(j);
-                    }
+                        List<Integer> src = new ArrayList<Integer>();
+                        List<Integer> res = new ArrayList<Integer>();
+                        for(int j = 0; j < 4; j++){
+                            if(spell.ingredients[j] > 0) res.add(j);
+                            else if(spell.ingredients[j] < 0) src.add(j);
+                        }
 
-                    for (Integer integer : src) {
-                        for (Integer integer2 : res) {
-                            if(!circles[integer].get(integer2)){
-                                circles[integer].set(integer2);
+                        for (Integer integer : src) {
+                            for (Integer integer2 : res) {
+                                if(!circles[integer].get(integer2)){
+                                    circles[integer].set(integer2);
+                                }
                             }
                         }
+
+                        System.out.println(spell.output(1));
+
+                        learn--;
+
+                        continue;
                     }
-
-                    System.out.println(spell.output(1));
-
-                    learn--;
-
-                    continue;
                 }
             }
 
