@@ -29,25 +29,18 @@ class Spell{
 
     public int id;
     public int[] ingredients;
-    public int tomeIndex;
-    public int taxCount;
     public boolean castable;
     public boolean repeatable;
 
-    public Spell(int id, int[] ingredients, int tomeIndex, int taxCount, boolean castable, boolean repeatable){
+    public Spell(int id, int[] ingredients, boolean castable, boolean repeatable){
         this.id = id;
         this.ingredients = ingredients;
-        this.tomeIndex = tomeIndex;
-        this.taxCount = taxCount;
         this.castable = castable;
         this.repeatable = repeatable;
     }
 
     public String output(int times){
-        if(tomeIndex == -1)
-            return "CAST " + this.id + " " + times;
-        else
-            return "LEARN " + this.id;
+        return "CAST " + this.id + " " + times;
     }
 
     public void show(){
@@ -61,6 +54,40 @@ class Spell{
         System.err.println();
         System.err.println("castable: " + castable);
         System.err.println("repeatable: " + repeatable);
+        System.err.println();
+    }
+}
+
+class LearnSpell{
+
+    public int id;
+    public int[] ingredients;
+    public int tomeIndex;
+    public int taxCount;
+    public boolean repeatable;
+
+    public LearnSpell(int id, int[] ingredients, int tomeIndex, int taxCount, boolean repeatable){
+        this.id = id;
+        this.ingredients = ingredients;
+        this.tomeIndex = tomeIndex;
+        this.taxCount = taxCount;
+        this.repeatable = repeatable;
+    }
+
+    public String output(){
+        return "LEARN " + this.id;
+    }
+
+    public void show(){
+        System.err.println();
+        System.err.println("id: " + id);
+        System.err.println("ingredients: ");
+        for(int i = 0; i < 4; i++){
+            System.err.println();
+            System.err.print(this.ingredients[i] + ", ");
+        }
+        System.err.println();
+        System.err.println("repeatable: " + repeatable);
         System.err.println("tomeIndex: " + tomeIndex);
         System.err.println("taxCount: " + taxCount);
         System.err.println();
@@ -73,15 +100,19 @@ class State{
     public int score;
     public int[] ingredients;
     public BitSet spellsUsed;
+    public BitSet spellsLearndUsed;
+    public BitSet spellsLearnd;
     public BitSet ordersDeliverd;
 
     public int depth;
     public String command;
 
-    public State(int score, int[] ingredients, BitSet spellsUsed, BitSet ordersDeliverd, String command, int depth){
+    public State(int score, int[] ingredients, BitSet spellsUsed, BitSet spellsLearndUsed, BitSet spellsLearnd, BitSet ordersDeliverd, String command, int depth){
         this.score = score;
         this.ingredients = ingredients;
         this.spellsUsed = spellsUsed;
+         this.spellsLearndUsed = spellsLearndUsed;
+        this.spellsLearnd = spellsLearnd;
         this.ordersDeliverd = ordersDeliverd;
         this.command = command;
         this.depth = depth;
@@ -126,6 +157,17 @@ class State{
             System.err.print(this.spellsUsed.get(i) + ", ");
         }
         System.err.println();
+        System.err.println("spellsLearnd: ");
+        for (int i = 0; i < Player.spellsToLearnSize; i++) {
+            System.err.print(this.spellsLearnd.get(i) + ", ");
+        }
+        System.err.println();
+        System.err.println();
+        System.err.println("spellsLearndUsed: ");
+        for (int i = 0; i < Player.spellsToLearnSize; i++) {
+            System.err.print(this.spellsLearndUsed.get(i) + ", ");
+        }
+        System.err.println();
         System.err.println();
     }
 }
@@ -137,42 +179,33 @@ class Player {
     public static  List<Order> orders;
     public static  List<Spell> mySpells;
     public static  List<Spell> opSpells;
-    public static  List<Spell> spellsToLearn;
+    public static  List<LearnSpell> spellsToLearn;
     public static  int mySpellsSize;
     public static  int opSpellsSize;
     public static  int spellsToLearnSize = 6;
 
     public static long startTime;
     public static int depth = 12;
-    public static double[] values = {0, 0, 0, 0};
+    public static double[] values = {1, 2, 3, 4};
 
     public static int timeToEnd = 50;
-    public static int learn = 8;
-    public static int haveFreeScr = 2;
 
     public static int ordersLeftToMe = 6;
     public static int ordersLeftToOpponent = 6;
     public static int prevOpponentScore = 0;
     public static int prevMyScore = 0;
 
-    public static BitSet[] circles = new BitSet[4];
-
     public static List<State> states;
 
     public static void main(String args[]) {
         Scanner in = new Scanner(System.in);
-
-        for(int i = 0; i < 4; i++){
-            circles[i] = new BitSet(4);
-        }
 
         // game loop
         while (true) {
             orders = new ArrayList<Order>();
             mySpells = new ArrayList<Spell>();
             opSpells = new ArrayList<Spell>();
-            spellsToLearn = new ArrayList<Spell>();
-            values = new double[]{0, 0, 0, 0};
+            spellsToLearn = new ArrayList<LearnSpell>();
 
             int actionCount = in.nextInt(); // the number of spells and recipes in play
             startTime = System.currentTimeMillis();
@@ -192,22 +225,16 @@ class Player {
                 int[] ingredients = {delta0, delta1, delta2, delta3};
                 
                 if(actionType.equals("BREW")){
-                    double sum = delta0 + delta1 + delta2 + delta3;
-                    sum *= -1.0;
-                    if(ingredients[0] != 0) values[0] += price * ((ingredients[0] * -1.0) / sum);
-                    if(ingredients[1] != 0) values[1] += price * ((ingredients[1] * -1.0) / sum);
-                    if(ingredients[2] != 0) values[2] += price * ((ingredients[2] * -1.0) / sum);
-                    if(ingredients[3] != 0) values[3] += price * ((ingredients[2] * -1.0) / sum);
                     orders.add(new Order(actionId, ingredients, price));
                 }
                 else if(actionType.equals("CAST")){
-                    mySpells.add(new Spell(actionId, ingredients, tomeIndex, taxCount, castable, repeatable));
+                    mySpells.add(new Spell(actionId, ingredients, castable, repeatable));
                 }
                 else if(actionType.equals("OPPONENT_CAST")){
-                    opSpells.add(new Spell(actionId, ingredients, tomeIndex, taxCount, castable, repeatable));
+                    opSpells.add(new Spell(actionId, ingredients, castable, repeatable));
                 }
                 else if(actionType.equals("LEARN")){
-                    spellsToLearn.add(new Spell(actionId, ingredients, tomeIndex, taxCount, castable, repeatable));
+                    spellsToLearn.add(new LearnSpell(actionId, ingredients, tomeIndex, taxCount, repeatable));
                 }
             }
 
@@ -223,19 +250,6 @@ class Player {
                 mySpellsUsed.set(i, !spell.castable);
             }
 
-            values[0] = Math.round(values[0]);
-            values[1] = Math.round(values[1]);
-            values[2] = Math.round(values[2]);
-            values[3] = Math.round(values[3]);
-
-            /*System.err.println();
-            System.err.println("values: ");
-            System.err.println("0: " + values[0]);
-            System.err.println("1: " + values[1]);
-            System.err.println("2: " + values[2]);
-            System.err.println("3: " + values[3]);
-            System.err.println();*/
-
             for (int i = 0; i < 2; i++) {
                 int inv0 = in.nextInt(); // tier-0 ingredients in inventory
                 int inv1 = in.nextInt();
@@ -244,14 +258,14 @@ class Player {
                 int[] ingredients = {inv0, inv1, inv2, inv3};
                 int score = in.nextInt(); // amount of rupees
                 if(i == 0){
-                    me = new State(score, ingredients, mySpellsUsed, new BitSet(5), "", 0);
+                    me = new State(0, ingredients, mySpellsUsed, new BitSet(spellsToLearnSize), new BitSet(spellsToLearnSize), new BitSet(5), "", 0);
                     if(score != prevMyScore){
                         prevMyScore = score;
                         ordersLeftToMe--;
                     }
                 }
                 else{
-                    opponent = new State(score, ingredients, new BitSet(opSpellsSize), new BitSet(5), "", 0);
+                    //opponent = new State(score, ingredients, new BitSet(opSpellsSize), new BitSet(spellsToLearnSize), new BitSet(spellsToLearnSize), new BitSet(5), "", 0);
                     if(score != prevOpponentScore){
                         prevOpponentScore = score;
                         ordersLeftToOpponent--;
@@ -266,78 +280,6 @@ class Player {
             //opponent.show();
 
 
-            if(learn > 0){
-
-                /*System.err.println();
-                System.err.println("circles: ");
-                for(int i = 0; i < 4; i++){
-                    System.err.println("i: " + i);
-                    System.err.println();
-                    for(int j = 0; j < 4; j++){
-                        System.err.print(circles[i].get(j) + ", ");
-                    }
-                    System.err.println();
-                    System.err.println();
-                }
-
-                System.err.println();*/
-
-                if(haveFreeScr > 0){
-                    int bestId = -1;
-                    int bestValue = 1;
-                    for (Spell spell : spellsToLearn) {
-                        if(spell.tomeIndex > me.ingredients[0]) continue;
-                        int[] newIngr = new int[]{0, 0, 0, 0};
-                        newIngr = addIngredients(newIngr, spell.ingredients);
-                        if(isValidIngredients(newIngr)){
-                            int value = 0;
-                            for(int i = 0; i < 4; i++){
-                                value += newIngr[i];
-                            }
-                            if(value > bestValue){
-                                bestValue = value;
-                                bestId = spell.id;
-                            }
-                        }
-                    }
-
-                    if(bestId != -1){
-                        haveFreeScr--;
-                        learn--;
-                        System.out.println("LEARN " + bestId);
-                        continue;
-                    }
-                }
-
-                if(learn - haveFreeScr > 0){
-                    int index = whatToLearn(me.ingredients[0]);
-                    if(index != -1){
-                        Spell spell = spellsToLearn.get(index);
-
-                        List<Integer> src = new ArrayList<Integer>();
-                        List<Integer> res = new ArrayList<Integer>();
-                        for(int j = 0; j < 4; j++){
-                            if(spell.ingredients[j] > 0) res.add(j);
-                            else if(spell.ingredients[j] < 0) src.add(j);
-                        }
-
-                        for (Integer integer : src) {
-                            for (Integer integer2 : res) {
-                                if(!circles[integer].get(integer2)){
-                                    circles[integer].set(integer2);
-                                }
-                            }
-                        }
-
-                        System.out.println(spell.output(1));
-
-                        learn--;
-
-                        continue;
-                    }
-                }
-            }
-
             states = new ArrayList<State>();
             String output = Sim(me);
             
@@ -351,66 +293,25 @@ class Player {
         }
     }
 
-    public static int whatToLearn(int numberOfBlues){
-        int numberOfCircles = 0;
-        int bestIndex = -1;
-
-        for(int i = 0; i < spellsToLearnSize; i++){
-            Spell spell = spellsToLearn.get(i);
-            if(spell.repeatable && numberOfBlues >= spell.tomeIndex){
-                int monePositive = 0;
-                int moneNegative = 0;
-
-                List<Integer> src = new ArrayList<Integer>();
-                List<Integer> res = new ArrayList<Integer>();
-                for(int j = 0; j < 4; j++){
-                    if(spell.ingredients[j] > 0){
-                        res.add(j);
-                        monePositive += spell.ingredients[j];
-                    }
-                    else if(spell.ingredients[j] < 0){
-                        src.add(j);
-                        moneNegative += spell.ingredients[j] * -1;
-                    }
-                }
-
-                //if(monePositive > 4 || moneNegative > 4) continue;
-
-                int mone = 0;
-
-                for (Integer integer : src) {
-                    for (Integer integer2 : res) {
-                        if(!circles[integer].get(integer2)){
-                            mone++;
-                        }
-                    }
-                }
-
-                if(mone > numberOfCircles){
-                    numberOfCircles = mone;
-                    bestIndex = i;
-                }
-            }
-        }
-
-        return bestIndex;
-    }
-
     public static String Sim(State state){
 
         Queue<State> que = new ArrayDeque<State>();
         que.add(state);
         states.add(state);
         
-        int bestPrice = 0;
+        double bestPrice = 0;
         String bestCommand = "";
 
         boolean start = true;
 
+        int moneStates = 0;
+
         while(!que.isEmpty()){
             State currState = que.remove();
+            moneStates++;
+            
 
-            if(System.currentTimeMillis() - startTime >= timeToEnd) break;
+            if(moneStates > 300 && System.currentTimeMillis() - startTime >= timeToEnd) break;
 
             //System.err.println("currState: ");
             //currState.show();
@@ -429,7 +330,7 @@ class Player {
 
                 int[] newIngr = addIngredients(currState.ingredients, order.ingredients);
 
-                State newState = new State(currState.score + order.price, newIngr, currState.spellsUsed, ordersDeliverd, command, currState.depth + 1);
+                State newState = new State(currState.score + order.price, newIngr, currState.spellsUsed, currState.spellsLearndUsed, currState.spellsLearnd, ordersDeliverd, command, currState.depth + 1);
 
                 if(!hasBetterOrEqualState(newState)){
                     states.add(newState);
@@ -440,11 +341,6 @@ class Player {
             if(currState.score > bestPrice){
                 bestPrice = currState.score;
                 bestCommand = currState.command;
-
-                System.err.println();
-                System.err.println("bestPrice: " + bestPrice);
-                System.err.println("bestCommand: " + bestCommand);
-                System.err.println();
             }
 
             //CAST
@@ -459,7 +355,7 @@ class Player {
 
                         spellsUsed.set(i);
 
-                        State newState = new State(currState.score, newIngr, spellsUsed, currState.ordersDeliverd, command, currState.depth + 2);
+                        State newState = new State(currState.score, newIngr, spellsUsed, new BitSet(spellsToLearnSize), currState.spellsLearnd, currState.ordersDeliverd, command, currState.depth + 2);
                         if(!hasBetterOrEqualState(newState)){
                             states.add(newState);
                             que.add(newState);
@@ -481,7 +377,7 @@ class Player {
 
                         spellsUsed.set(i);
 
-                        State newState = new State(currState.score, newIngr, spellsUsed, currState.ordersDeliverd, command, currState.depth + 1);
+                        State newState = new State(currState.score, newIngr, spellsUsed, new BitSet(spellsToLearnSize), currState.spellsLearnd, currState.ordersDeliverd, command, currState.depth + 1);
                         if(!hasBetterOrEqualState(newState)){
                             states.add(newState);
                             que.add(newState);
@@ -496,9 +392,87 @@ class Player {
                 }
             }
 
-            
+            //LEARN
+            for (int i = 0; i < spellsToLearnSize; i++) {
+                LearnSpell spell = spellsToLearn.get(i);
+                if(currState.spellsLearnd.get(i)){
+                    //i have LEARND this spell so I can CAST it now
+                    if(currState.spellsLearndUsed.get(i)){
+                        //I CASTED the spell already
+                        int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
+                        while(isValidIngredients(newIngr)){
+                            String command = currState.command;
+                            if(start) command = "REST";
+
+                            BitSet spellsLearndUsed = (BitSet) new BitSet(spellsToLearnSize);
+
+                            spellsLearndUsed.set(i);
+
+                            State newState = new State(currState.score, newIngr, new BitSet(mySpellsSize), spellsLearndUsed, currState.spellsLearnd, currState.ordersDeliverd, command, currState.depth + 1);
+                            if(!hasBetterOrEqualState(newState)){
+                                states.add(newState);
+                                que.add(newState);
+                            }
+
+                            if(!spell.repeatable) break;
+
+                            newIngr = addIngredients(newIngr, spell.ingredients);
+                        }
+                    }
+                    else{
+                        int times = 1;
+                        int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
+                        while(isValidIngredients(newIngr)){
+                            String command = currState.command;
+                            if(start) command = spell.output();
+
+                            BitSet spellsLearndUsed = (BitSet) currState.spellsLearndUsed.clone();
+
+                            spellsLearndUsed.set(i);
+
+                            State newState = new State(currState.score, newIngr, currState.spellsUsed, spellsLearndUsed, currState.spellsLearnd, currState.ordersDeliverd, command, currState.depth + 2);
+                            if(!hasBetterOrEqualState(newState)){
+                                states.add(newState);
+                                que.add(newState);
+                            }
+
+                            times++;
+
+                            if(!spell.repeatable) break;
+
+                            newIngr = addIngredients(newIngr, spell.ingredients);
+                        }
+                    }
+                }
+                else{
+                    //Try to learn this spell
+                    if(spell.tomeIndex > currState.ingredients[0]){
+                        //I don't have enough blues to pay for it
+                        continue;
+                    }
+
+                    int[] newIngr = Arrays.copyOf(currState.ingredients, 4);
+                    newIngr[0] -= spell.tomeIndex;
+                    newIngr[0] += spell.taxCount;
+                    if(isValidIngredients(newIngr)){
+
+                        BitSet spellsLearnd = (BitSet) currState.spellsLearnd.clone();
+
+                        spellsLearnd.set(i);
+
+                        State newState = new State(currState.score, newIngr, currState.spellsUsed, currState.spellsLearndUsed, spellsLearnd, currState.ordersDeliverd, spell.output(), currState.depth + 1);
+                        if(!hasBetterOrEqualState(newState)){
+                            states.add(newState);
+                            que.add(newState);
+                        }
+                    }
+                }
+            }
+
             start = false;
         }
+
+        System.err.println("moneStates: " + moneStates);
 
         System.err.println();
         System.err.println("bestPrice: " + bestPrice);
@@ -568,6 +542,26 @@ class Player {
                     break;
                 }
             }
+
+            /*if(!same) continue;
+
+            //check spellsLearnd
+            for(int i = 0; i < spellsToLearnSize; i++){
+                if(st.spellsLearnd.get(i) == false && state.spellsUsed.get(i)){
+                    same = false;
+                    break;
+                }
+            }
+
+            if(!same) continue;
+
+            //check spellsLearndUsed
+            for(int i = 0; i < spellsToLearnSize; i++){
+                if(st.spellsLearndUsed.get(i) && state.spellsLearndUsed.get(i) == false){
+                    same = false;
+                    break;
+                }
+            }*/
 
             if(same) return true;
         }
