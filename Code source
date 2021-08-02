@@ -314,7 +314,7 @@ class Player {
         states.add(state);
         
         double bestPrice = 0;
-        String bestCommand = "";
+        State bestState = null;
 
         boolean start = true;
 
@@ -354,13 +354,8 @@ class Player {
 
             if(Math.pow(0.95, currState.depth) * currState.score > bestPrice){
                 bestPrice = Math.pow(0.95, currState.depth) * currState.score;
-                bestCommand = currState.command;
-                spellsToLearnASAP = new ArrayList<Integer>();
-                for(int i = 0; i < spellsToLearnSize; i++){
-                    if(currState.spellsLearnd.get(i)){
-                        spellsToLearnASAP.add(i);
-                    }
-                }
+                bestState = currState;
+                
             }
 
             //CAST
@@ -498,12 +493,18 @@ class Player {
 
         System.err.println();
         System.err.println("bestPrice: " + bestPrice);
-        System.err.println("bestCommand: " + bestCommand);
         System.err.println();
 
-        if(bestCommand == "") return randomAction(state);
+        spellsToLearnASAP = new ArrayList<Integer>();
+        for(int i = 0; i < spellsToLearnSize; i++){
+            if(bestState.spellsLearnd.get(i)){
+                spellsToLearnASAP.add(i);
+            }
+        }
 
-        return bestCommand;
+        if(bestState == null) return randomAction(state);
+
+        return bestState.command;
     }
 
 
