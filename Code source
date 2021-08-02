@@ -97,7 +97,7 @@ class LearnSpell{
 
 class State{
 
-    public int score;
+    public double score;
     public int[] ingredients;
     public BitSet spellsUsed;
     public BitSet spellsLearndUsed;
@@ -107,7 +107,7 @@ class State{
     public int depth;
     public String command;
 
-    public State(int score, int[] ingredients, BitSet spellsUsed, BitSet spellsLearndUsed, BitSet spellsLearnd, BitSet ordersDeliverd, String command, int depth){
+    public State(double score, int[] ingredients, BitSet spellsUsed, BitSet spellsLearndUsed, BitSet spellsLearnd, BitSet ordersDeliverd, String command, int depth){
         this.score = score;
         this.ingredients = ingredients;
         this.spellsUsed = spellsUsed;
@@ -183,6 +183,8 @@ class Player {
     public static  int mySpellsSize;
     public static  int opSpellsSize;
     public static  int spellsToLearnSize = 6;
+
+    public static List<Integer> spellsToLearnASAP;
 
     public static long startTime;
     public static int depth = 12;
@@ -282,6 +284,18 @@ class Player {
 
             states = new ArrayList<State>();
             String output = Sim(me);
+
+            boolean hasLearn = false;
+
+            for (Integer index : spellsToLearnASAP) {
+                if(spellsToLearn.get(index).tomeIndex <= me.ingredients[0]){
+                    hasLearn = true;
+                    System.out.println(spellsToLearn.get(index).output());
+                    break;
+                }
+            }
+
+            if(hasLearn) continue;
             
 
             // Write an action using System.out.println()
@@ -311,7 +325,7 @@ class Player {
             moneStates++;
             
 
-            if(moneStates > 300 && System.currentTimeMillis() - startTime >= timeToEnd) break;
+            if(moneStates > 200 && System.currentTimeMillis() - startTime >= timeToEnd) break;
 
             //System.err.println("currState: ");
             //currState.show();
@@ -338,9 +352,15 @@ class Player {
                 }
             }
 
-            if(currState.score > bestPrice){
-                bestPrice = currState.score;
+            if(Math.pow(0.95, currState.depth) * currState.score > bestPrice){
+                bestPrice = Math.pow(0.95, currState.depth) * currState.score;
                 bestCommand = currState.command;
+                spellsToLearnASAP = new ArrayList<Integer>();
+                for(int i = 0; i < spellsToLearnSize; i++){
+                    if(currState.spellsLearnd.get(i)){
+                        spellsToLearnASAP.add(i);
+                    }
+                }
             }
 
             //CAST
@@ -455,12 +475,14 @@ class Player {
                     newIngr[0] -= spell.tomeIndex;
                     newIngr[0] += spell.taxCount;
                     if(isValidIngredients(newIngr)){
+                        String command = currState.command;
+                        if(start) command = spell.output();
 
                         BitSet spellsLearnd = (BitSet) currState.spellsLearnd.clone();
 
                         spellsLearnd.set(i);
 
-                        State newState = new State(currState.score, newIngr, currState.spellsUsed, currState.spellsLearndUsed, spellsLearnd, currState.ordersDeliverd, spell.output(), currState.depth + 1);
+                        State newState = new State(currState.score + 0.5, newIngr, currState.spellsUsed, currState.spellsLearndUsed, spellsLearnd, currState.ordersDeliverd, command, currState.depth + 1);
                         if(!hasBetterOrEqualState(newState)){
                             states.add(newState);
                             que.add(newState);
