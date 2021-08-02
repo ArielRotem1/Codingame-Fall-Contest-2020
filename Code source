@@ -73,14 +73,16 @@ class State{
     public int score;
     public int[] ingredients;
     public BitSet spellsUsed;
+    public BitSet ordersDeliverd;
 
     public int depth;
     public String command;
 
-    public State(int score, int[] ingredients, BitSet spellsUsed, String command, int depth){
+    public State(int score, int[] ingredients, BitSet spellsUsed, BitSet ordersDeliverd, String command, int depth){
         this.score = score;
         this.ingredients = ingredients;
         this.spellsUsed = spellsUsed;
+        this.ordersDeliverd = ordersDeliverd;
         this.command = command;
         this.depth = depth;
     }
@@ -92,6 +94,9 @@ class State{
         for (Order order : Player.orders) {
             if(this.haveIngredients(order.ingredients)){
                 output.add(order);
+            }
+            else{
+                output.add(null);
             }
         }
 
@@ -239,14 +244,14 @@ class Player {
                 int[] ingredients = {inv0, inv1, inv2, inv3};
                 int score = in.nextInt(); // amount of rupees
                 if(i == 0){
-                    me = new State(score, ingredients, mySpellsUsed, "", 0);
+                    me = new State(score, ingredients, mySpellsUsed, new BitSet(5), "", 0);
                     if(score != prevMyScore){
                         prevMyScore = score;
                         ordersLeftToMe--;
                     }
                 }
                 else{
-                    opponent = new State(score, ingredients, new BitSet(opSpellsSize), "", 0);
+                    opponent = new State(score, ingredients, new BitSet(opSpellsSize), new BitSet(5), "", 0);
                     if(score != prevOpponentScore){
                         prevOpponentScore = score;
                         ordersLeftToOpponent--;
@@ -412,24 +417,34 @@ class Player {
 
             //System.err.println("passed...");
 
-            Order orderIcanDeliver = getBestOrderToBrew(currState.canBrew());
+            List<Order> ordersIcanDeliver = currState.canBrew();
+            for (int i = 0; i < 5; i++) {
+                Order order = ordersIcanDeliver.get(i);
+                if(order == null) continue;
+                String command = currState.command;
+                if(start) command = order.output();
 
-            if(orderIcanDeliver != null && orderIcanDeliver.price > bestPrice){
-                bestPrice = orderIcanDeliver.price;
+                BitSet ordersDeliverd = (BitSet) currState.ordersDeliverd.clone();
+                ordersDeliverd.set(i);
+
+                int[] newIngr = addIngredients(currState.ingredients, order.ingredients);
+
+                State newState = new State(currState.score + order.price, newIngr, currState.spellsUsed, ordersDeliverd, command, currState.depth + 1);
+
+                if(!hasBetterOrEqualState(newState)){
+                    states.add(newState);
+                    que.add(newState);
+                }
+            }
+
+            if(currState.score > bestPrice){
+                bestPrice = currState.score;
                 bestCommand = currState.command;
-                if(bestCommand == ""){
-                    bestCommand = orderIcanDeliver.output();
-                }
 
-                if(ordersLeftToMe == 1 && prevMyScore + bestPrice > prevOpponentScore){
-                    System.err.println();
-                    System.err.println("Win now!!");
-                    System.err.println("bestPrice: " + bestPrice);
-                    System.err.println("bestCommand: " + bestCommand);
-                    System.err.println();
-
-                    return bestCommand;
-                }
+                System.err.println();
+                System.err.println("bestPrice: " + bestPrice);
+                System.err.println("bestCommand: " + bestCommand);
+                System.err.println();
             }
 
             //CAST
@@ -444,7 +459,7 @@ class Player {
 
                         spellsUsed.set(i);
 
-                        State newState = new State(currState.score, newIngr, spellsUsed, command, currState.depth + 2);
+                        State newState = new State(currState.score, newIngr, spellsUsed, currState.ordersDeliverd, command, currState.depth + 2);
                         if(!hasBetterOrEqualState(newState)){
                             states.add(newState);
                             que.add(newState);
@@ -466,7 +481,7 @@ class Player {
 
                         spellsUsed.set(i);
 
-                        State newState = new State(currState.score, newIngr, spellsUsed, command, currState.depth + 1);
+                        State newState = new State(currState.score, newIngr, spellsUsed, currState.ordersDeliverd, command, currState.depth + 1);
                         if(!hasBetterOrEqualState(newState)){
                             states.add(newState);
                             que.add(newState);
@@ -533,6 +548,7 @@ class Player {
 
     public static boolean hasBetterOrEqualState(State state){
         for (State st : states) {
+            if(st.depth > state.depth || st.score < state.score) continue;
             boolean same = true;
 
             //check ingredients
