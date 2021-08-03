@@ -184,18 +184,24 @@ class Player {
     public static  int opSpellsSize;
     public static  int spellsToLearnSize = 6;
 
-    public static List<Integer> spellsToLearnASAP;
+    public static List<Integer> spellsToLearnASAP = new ArrayList<Integer>();
 
     public static long startTime;
     public static int depth = 12;
     public static double[] values = {1, 2, 3, 4};
 
     public static int timeToEnd = 50;
+    public static int learn = 10;
 
     public static int ordersLeftToMe = 6;
     public static int ordersLeftToOpponent = 6;
     public static int prevOpponentScore = 0;
     public static int prevMyScore = 0;
+
+    public static boolean haveBlueRep = false;
+    public static boolean haveGreenRep = false;
+    public static boolean haveOrangeRep = false;
+    public static boolean haveYellowRep = false;
 
     public static List<State> states;
 
@@ -230,6 +236,12 @@ class Player {
                     orders.add(new Order(actionId, ingredients, price));
                 }
                 else if(actionType.equals("CAST")){
+                    if(repeatable && (!haveBlueRep || !haveGreenRep || !haveOrangeRep || !haveYellowRep)){
+                        if(ingredients[0] < 0) haveBlueRep = true;
+                        if(ingredients[1] < 0) haveGreenRep = true;
+                        if(ingredients[2] < 0) haveOrangeRep = true;
+                        if(ingredients[3] < 0) haveYellowRep = true;
+                    }
                     mySpells.add(new Spell(actionId, ingredients, castable, repeatable));
                 }
                 else if(actionType.equals("OPPONENT_CAST")){
@@ -281,13 +293,24 @@ class Player {
             //System.err.println("opponent: ");
             //opponent.show();
 
+            if(learn > 0 && (!haveBlueRep || !haveGreenRep || !haveOrangeRep || !haveYellowRep)){
+                int ID = WhatLearn(me.ingredients[0]);
+                if(ID != -1){
+                    System.out.println("LEARN " + ID + " Hmm...");
+                    learn--;
+                    continue;
+                }
+            }
+
 
             states = new ArrayList<State>();
             String output = Sim(me);
 
+            System.err.println("output: " + output);
+
             boolean hasLearn = false;
 
-            for (Integer index : spellsToLearnASAP) {
+            for (int index = 0; index < spellsToLearnASAP.size(); index++) {
                 if(spellsToLearn.get(index).tomeIndex <= me.ingredients[0]){
                     hasLearn = true;
                     System.out.println(spellsToLearn.get(index).output());
@@ -305,6 +328,145 @@ class Player {
             // later: BREW <id> | CAST <id> [<times>] | LEARN <id> | REST | WAIT
             System.out.println(output);
         }
+    }
+
+    public static int WhatLearn(int numberOfBlues){
+
+        int CanDoAChainReaction = 0;
+        int BestId = -1;
+
+        boolean HelpMeToHaveRepFromAllKinds = false;
+
+        for(int i = 0; i < 6; i++){
+            LearnSpell learnableSpell = spellsToLearn.get(i);
+            if(learnableSpell.tomeIndex > numberOfBlues) continue;
+
+            int[] inventoryGain = {0,0,0,0};
+            int[] inventoryCost = {0,0,0,0};
+            int sumCost = 0;
+
+            for(int j = 0; j < 4; j++){
+                if(learnableSpell.ingredients[j] > 0){
+                    inventoryGain[j] = learnableSpell.ingredients[j];
+                }
+                else{
+                    inventoryCost[j] = learnableSpell.ingredients[j];
+                    sumCost += inventoryCost[j] * -1;
+                }
+            }
+
+            //if(sumCost > 3) continue;
+
+            for(int j = 0; j < mySpells.size(); j++){
+                Spell mySpell = mySpells.get(j);
+                if(mySpell.repeatable == false) continue;
+
+                int[] SumInven1 = addIngredients(mySpell.ingredients, inventoryGain);
+                for(int k = 0; k < 4; k++){
+                    inventoryGain[k] *= 2;
+                }
+                int[] SumInven2 = addIngredients(mySpell.ingredients, inventoryGain);
+
+                if(isValidIngredients(SumInven1)){
+                    int[] sumInven = addIngredients(inventoryCost, SumInven1);
+                    if(isValidIngredients(sumInven)){
+
+                        int s = 0;
+                        for(int k = 0; k < 4; k++){
+                            s += sumInven[k] * values[k];
+                        }
+
+                        //If it help me and better than prev if the prev also help me
+                        //if it help me and prev is not so change it
+                        if(((!haveBlueRep && inventoryCost[0] < 0) ||
+                        (!haveGreenRep && inventoryCost[1] < 0) || 
+                        (!haveOrangeRep && inventoryCost[2] < 0) || 
+                        (!haveYellowRep && inventoryCost[3] < 0)) && (!HelpMeToHaveRepFromAllKinds || s > CanDoAChainReaction)){
+                            s = CanDoAChainReaction;
+                            BestId = learnableSpell.id;
+                            HelpMeToHaveRepFromAllKinds = true;
+                        }
+                        else if(!HelpMeToHaveRepFromAllKinds && s > CanDoAChainReaction){
+                            s = CanDoAChainReaction;
+                            BestId = learnableSpell.id;
+                        }
+                        //if it doesn't help me but I didn't found something that help me
+                        //and this is better than prev than change it
+                    }
+                }
+                else if(isValidIngredients(SumInven2)){
+                    int[] sumInven = addIngredients(inventoryCost, SumInven1);
+                    if(isValidIngredients(sumInven)){
+
+                        int s = 0;
+                        for(int k = 0; k < 4; k++){
+                            s += sumInven[k] * values[k];
+                        }
+
+                        //If it help me and better than prev if the prev also help me
+                        //if it help me and prev is not so change it
+                        if(((!haveBlueRep && inventoryCost[0] < 0) ||
+                        (!haveGreenRep && inventoryCost[1] < 0) || 
+                        (!haveOrangeRep && inventoryCost[2] < 0) || 
+                        (!haveYellowRep && inventoryCost[3] < 0)) && (!HelpMeToHaveRepFromAllKinds || s > CanDoAChainReaction)){
+                            s = CanDoAChainReaction;
+                            BestId = learnableSpell.id;
+                            HelpMeToHaveRepFromAllKinds = true;
+                        }
+                        else if(!HelpMeToHaveRepFromAllKinds && s > CanDoAChainReaction){
+                            s = CanDoAChainReaction;
+                            BestId = learnableSpell.id;
+                        }
+                        //if it doesn't help me but I didn't found something that help me
+                        //and this is better than prev than change it
+                    }
+                }
+            }
+        }
+
+        if(BestId != -1){
+            System.err.println("WhatLearn");
+            return BestId;
+        }
+
+        return getIdLearn(numberOfBlues);
+    }
+
+    public static int getIdLearn(int numberOfBlues){
+
+        int Max = -100;
+        int BestId = -1;
+
+        for(int i = 0; i < 6; i++){
+            LearnSpell learnableSpell = spellsToLearn.get(i);
+
+            if(learnableSpell.tomeIndex > numberOfBlues) continue;
+
+            int gain = 0;
+            int cost = 0;
+            int sumCost = 0;
+
+            for(int j = 0; j < 4; j++){
+                if(learnableSpell.ingredients[j] < 0){
+                    cost += learnableSpell.ingredients[j] * -1 * values[j];
+                    sumCost += learnableSpell.ingredients[j] * -1;
+                }
+                else{
+                    gain += learnableSpell.ingredients[j] * values[j];
+                }
+            }
+
+            //if(sumCost > 4) continue;
+
+            int diff = gain - cost;
+
+            if(diff > Max){
+                Max = diff;
+                BestId = learnableSpell.id;
+            }
+        }
+
+        return BestId;
     }
 
     public static String Sim(State state){
@@ -477,7 +639,7 @@ class Player {
 
                         spellsLearnd.set(i);
 
-                        State newState = new State(currState.score + 0.5, newIngr, currState.spellsUsed, currState.spellsLearndUsed, spellsLearnd, currState.ordersDeliverd, command, currState.depth + 1);
+                        State newState = new State(currState.score, newIngr, currState.spellsUsed, currState.spellsLearndUsed, spellsLearnd, currState.ordersDeliverd, command, currState.depth + 1);
                         if(!hasBetterOrEqualState(newState)){
                             states.add(newState);
                             que.add(newState);
@@ -495,14 +657,14 @@ class Player {
         System.err.println("bestPrice: " + bestPrice);
         System.err.println();
 
+        if(bestState == null) return randomAction(state);
+
         spellsToLearnASAP = new ArrayList<Integer>();
         for(int i = 0; i < spellsToLearnSize; i++){
             if(bestState.spellsLearnd.get(i)){
                 spellsToLearnASAP.add(i);
             }
         }
-
-        if(bestState == null) return randomAction(state);
 
         return bestState.command;
     }
