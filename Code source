@@ -370,9 +370,9 @@ class Player {
                 }
                 int[] SumInven2 = addIngredients(mySpell.ingredients, inventoryGain);
 
-                if(isValidIngredients(SumInven1)){
+                if(SumInven1 != null){
                     int[] sumInven = addIngredients(inventoryCost, SumInven1);
-                    if(isValidIngredients(sumInven)){
+                    if(sumInven != null){
 
                         int s = 0;
                         for(int k = 0; k < 4; k++){
@@ -397,9 +397,9 @@ class Player {
                         //and this is better than prev than change it
                     }
                 }
-                else if(isValidIngredients(SumInven2)){
-                    int[] sumInven = addIngredients(inventoryCost, SumInven1);
-                    if(isValidIngredients(sumInven)){
+                else if(SumInven2 != null){
+                    int[] sumInven = addIngredients(inventoryCost, SumInven2);
+                    if(sumInven != null){
 
                         int s = 0;
                         for(int k = 0; k < 4; k++){
@@ -527,13 +527,13 @@ class Player {
             }
 
             //CAST
-            for (int i = mySpellsSize - 1; i > -1; i--) {
+            for (int i = 0; i < mySpellsSize; i++) {
                 Spell spell = mySpells.get(i);
                 if(currState.spellsUsed.get(i)){
                     String command = currState.command;
                     if(start) command = "REST";
                     int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
-                    while(isValidIngredients(newIngr)){
+                    while(newIngr != null){
 
                         BitSet spellsUsed = new BitSet(mySpellsSize);
                         spellsUsed.set(i);
@@ -553,7 +553,7 @@ class Player {
                 else{
                     int times = 1;
                     int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
-                    while(isValidIngredients(newIngr)){
+                    while(newIngr != null){
                         String command = currState.command;
                         if(start) command = spell.output(times);
 
@@ -591,9 +591,8 @@ class Player {
             start = false;
         }
 
-        System.err.println("moneStates: " + moneStates);
-
         System.err.println();
+        System.err.println("moneStates: " + moneStates);
         System.err.println("bestPrice: " + bestPrice);
         System.err.println();
 
@@ -602,41 +601,19 @@ class Player {
         return bestState.command;
     }
 
-
-    public static Order getBestOrderToBrew(List<Order> ordersIcanBrew){
-        Order bestOrder = null;
-        int bestPrice = 0;
-
-        for (Order order : ordersIcanBrew) {
-            if(order.price > bestPrice){
-                bestPrice = order.price;
-                bestOrder = order;
-            }
-        }
-
-        return bestOrder;
-    }
-
     public static int[] addIngredients(int[] ingredients1, int[] ingredients2){
         int[] resIngr = new int[4];
-        resIngr[0] = ingredients1[0] + ingredients2[0];
-        resIngr[1] = ingredients1[1] + ingredients2[1];
-        resIngr[2] = ingredients1[2] + ingredients2[2];
-        resIngr[3] = ingredients1[3] + ingredients2[3];
-        return resIngr;
-    }
-
-    public static boolean isValidIngredients(int[] ingr){
         int mone = 0;
-        for (int val : ingr) {
-            if(val < 0) return false;
-            mone += val;
+
+        for (int i = 0; i < 4; i++) {
+            resIngr[i] = ingredients1[i] + ingredients2[i];
+            if(resIngr[i] < 0) return null;
+            mone += resIngr[i];
         }
 
-        return mone <= 10;
+        if(mone > 10) return null;
+        return resIngr;
     }
-
-
 
     public static boolean hasBetterOrEqualState(State state){
         for (State st : states) {
@@ -680,7 +657,7 @@ class Player {
             }
             int[] newIngr = addIngredients(state.ingredients, spell.ingredients);
             int times = 1;
-            while(isValidIngredients(newIngr)){
+            while(newIngr != null){
                 String command = spell.output(times);
                 commands.add(command);
 
