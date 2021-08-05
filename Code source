@@ -99,17 +99,15 @@ class State{
 
     public double score;
     public int[] ingredients;
-    public BitSet spellsUsed;
-    public BitSet ordersDeliverd;
+    public BitSet spellsUsedAndOrdersDeliverd;
 
     public int depth;
     public String command;
 
-    public State(double score, int[] ingredients, BitSet spellsUsed, BitSet ordersDeliverd, String command, int depth){
+    public State(double score, int[] ingredients, BitSet spellsUsedAndOrdersDeliverd, String command, int depth){
         this.score = score;
         this.ingredients = ingredients;
-        this.spellsUsed = spellsUsed;
-        this.ordersDeliverd = ordersDeliverd;
+        this.spellsUsedAndOrdersDeliverd = spellsUsedAndOrdersDeliverd;
         this.command = command;
         this.depth = depth;
     }
@@ -143,7 +141,7 @@ class State{
         this.ingredients[2] * 0.3 + this.ingredients[3] * 0.4;
 
         for (int i = 0; i < Player.mySpellsSize; i++) {
-            if(this.spellsUsed.get(i)) res += 0.01;
+            if(this.spellsUsedAndOrdersDeliverd.get(i)) res += 0.01;
         }
 
         return  Math.pow(0.95, this.depth) * res;
@@ -161,7 +159,7 @@ class State{
         System.err.println();
         System.err.println("spellsUsed: ");
         for (int i = 0; i < Player.mySpellsSize; i++) {
-            System.err.print(this.spellsUsed.get(i) + ", ");
+            System.err.print(this.spellsUsedAndOrdersDeliverd.get(i) + ", ");
         }
         System.err.println();
         System.err.println();
@@ -184,14 +182,14 @@ class Sortbyroll implements Comparator<State>
 
 class Player {
 
-
-    public static  List<Order> orders;
-    public static  List<Spell> mySpells;
-    public static  List<Spell> opSpells;
-    public static  List<LearnSpell> spellsToLearn;
-    public static  int mySpellsSize;
-    public static  int opSpellsSize;
-    public static  int spellsToLearnSize = 6;
+    public static List<Order> orders;
+    public static List<Spell> mySpells;
+    public static List<Spell> opSpells;
+    public static List<LearnSpell> spellsToLearn;
+    public static int mySpellsSize;
+    public static int opSpellsSize;
+    public static int spellsToLearnSize = 6;
+    public static int ordersSize = 5;
 
     public static List<Integer> spellsToLearnASAP = new ArrayList<Integer>();
 
@@ -270,11 +268,11 @@ class Player {
             mySpellsSize = mySpells.size();
             opSpellsSize = opSpells.size();
 
-            BitSet mySpellsUsed = new BitSet(mySpellsSize);
+            BitSet spellsUsedAndOrdersDeliverd = new BitSet(mySpellsSize + ordersSize);
 
             for (int i = 0; i < mySpellsSize; i++) {
                 Spell spell = mySpells.get(i);
-                mySpellsUsed.set(i, !spell.castable);
+                spellsUsedAndOrdersDeliverd.set(i, !spell.castable);
             }
 
             for (int i = 0; i < 2; i++) {
@@ -285,7 +283,7 @@ class Player {
                 int[] ingredients = {inv0, inv1, inv2, inv3};
                 int score = in.nextInt(); // amount of rupees
                 if(i == 0){
-                    me = new State(0, ingredients, mySpellsUsed, new BitSet(5), "", 0);
+                    me = new State(0, ingredients, spellsUsedAndOrdersDeliverd, "", 0);
                     if(score != prevMyScore){
                         prevMyScore = score;
                         ordersLeftToMe--;
@@ -515,16 +513,17 @@ class Player {
                 String command = currState.command;
                 if(start) command = order.output();
 
-                BitSet ordersDeliverd = (BitSet) currState.ordersDeliverd.clone();
-                ordersDeliverd.set(i);
+                BitSet spellsUsedAndOrdersDeliverd = (BitSet) currState.spellsUsedAndOrdersDeliverd.clone();
+                spellsUsedAndOrdersDeliverd.set(i + mySpellsSize);
 
                 int[] newIngr = addIngredients(currState.ingredients, order.ingredients);
 
-                State newState = new State(currState.score + order.price, newIngr, (BitSet) currState.spellsUsed.clone(),
-                ordersDeliverd, command, currState.depth + 1);
+                State newState = new State(currState.score + order.price, newIngr, spellsUsedAndOrdersDeliverd, 
+                command, currState.depth + 1);
 
-                if(addToStates(newState)){
-                    states.add(newState);
+                boolean isAdded = addToStates(newState);
+
+                if(isAdded){
                     nextLevel.add(newState);
                 }
             }
@@ -541,17 +540,18 @@ class Player {
             for (int i = 0; i < mySpellsSize; i++) {
                 Spell spell = mySpells.get(i);
                 String command = currState.command;
-                if(currState.spellsUsed.get(i)){
+                if(currState.spellsUsedAndOrdersDeliverd.get(i)){
                     if(start) command = "REST";
                     int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
                     while(newIngr != null){
-                        BitSet spellsUsed = new BitSet(mySpellsSize);
-                        spellsUsed.set(i);
+                        BitSet spellsUsedAndOrdersDeliverd = (BitSet) currState.spellsUsedAndOrdersDeliverd.clone();
+                        spellsUsedAndOrdersDeliverd.clear(0, mySpellsSize);
+                        spellsUsedAndOrdersDeliverd.set(i);
 
-                        State newState = new State(currState.score, newIngr, spellsUsed,
-                        (BitSet) currState.ordersDeliverd.clone(), command, currState.depth + 2);
-                        if(addToStates(newState)){
-                            states.add(newState);
+                        State newState = new State(currState.score, newIngr, spellsUsedAndOrdersDeliverd, 
+                        command, currState.depth + 2);
+                        boolean isAdded = addToStates(newState);
+                        if(isAdded){
                             nextLevel.add(newState);
                         }
 
@@ -566,14 +566,15 @@ class Player {
                     while(newIngr != null){
                         if(start) command = spell.output(times);
 
-                        BitSet spellsUsed = (BitSet) currState.spellsUsed.clone();
+                        BitSet spellsUsedAndOrdersDeliverd = (BitSet) currState.spellsUsedAndOrdersDeliverd.clone();
 
-                        spellsUsed.set(i);
+                        spellsUsedAndOrdersDeliverd.set(i);
 
-                        State newState = new State(currState.score, newIngr, spellsUsed,
-                        (BitSet) currState.ordersDeliverd.clone(), command, currState.depth + 1);
-                        if(addToStates(newState)){
-                            states.add(newState);
+                        State newState = new State(currState.score, newIngr, spellsUsedAndOrdersDeliverd, 
+                        command, currState.depth + 1);
+
+                        boolean isAdded = addToStates(newState);
+                        if(isAdded){
                             nextLevel.add(newState);
                         }
 
@@ -660,11 +661,11 @@ class Player {
 
             //check spellsUsed
             for(int j = 0; j < mySpellsSize; j++){
-                if(st.spellsUsed.get(j) && state.spellsUsed.get(j) == false){
+                if(st.spellsUsedAndOrdersDeliverd.get(j) && state.spellsUsedAndOrdersDeliverd.get(j) == false){
                     sameSpellsUsed = false;
                     worseSpellsUsed = false;
                 }
-                else if(st.spellsUsed.get(j) == false && state.spellsUsed.get(j)){
+                else if(st.spellsUsedAndOrdersDeliverd.get(j) == false && state.spellsUsedAndOrdersDeliverd.get(j)){
                     betterSpellsUsed = false;
                     sameSpellsUsed = false;
                 }
@@ -678,16 +679,13 @@ class Player {
             if(state.score <= st.score && state.depth >= st.depth && 
             ((worseIngredients && sameSpellsUsed) || (sameIngredients && worseSpellsUsed) ||
             (sameIngredients && sameSpellsUsed) || (worseIngredients && worseSpellsUsed))) {
-                pass = false;
-                break;
+                return false;
             }
             else if(state.score < st.score && state.depth == st.depth && ((sameIngredients && sameSpellsUsed) || (worseIngredients && worseSpellsUsed))) {
-                pass = false;
-                break;
+                return false;
             }
             else if(state.score == st.score && state.depth > st.depth && ((sameIngredients && sameSpellsUsed) || (worseIngredients && worseSpellsUsed))) {
-                pass = false;
-                break;
+                return false;
             }
 
             if((betterIngredients || betterSpellsUsed || (!sameSpellsUsed && !worseSpellsUsed) || (!sameIngredients && !worseIngredients)) && 
@@ -703,13 +701,17 @@ class Player {
 
             if(((betterIngredients && betterSpellsUsed) || (sameIngredients && sameSpellsUsed) 
             || (betterIngredients && sameSpellsUsed) || (sameIngredients && betterSpellsUsed)) && state.score >= st.score && state.depth <= st.depth){
-                states.remove(i);
+                states.set(i, state);
                 return true;
             }
             else if(sameSpellsUsed && sameIngredients && state.score >= st.score && state.depth <= st.depth) {
-                states.remove(i);
+                states.set(i, state);
                 return true;
             }
+        }
+
+        if(pass){
+            states.add(state);
         }
 
         return pass;
