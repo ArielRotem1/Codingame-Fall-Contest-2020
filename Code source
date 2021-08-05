@@ -146,9 +146,7 @@ class State{
             if(this.spellsUsed.get(i)) res += 0.01;
         }
 
-        // Math.pow(0.95, this.depth) * 
-
-        return res;
+        return  Math.pow(0.95, this.depth) * res;
     }
 
     public void show(){
@@ -201,7 +199,7 @@ class Player {
     public static int depth = 12;
     public static double[] values = {1, 2, 3, 4};
 
-    public static int mone = 0;
+    //public static int mone = 0;
 
     public static int N = 20;
     public static int learn = 10;
@@ -319,7 +317,7 @@ class Player {
 
 
             states = new ArrayList<State>();
-            mone = 0;
+            //mone = 0;
             String output = Sim(me);
 
             boolean hasLearn = false;
@@ -627,11 +625,8 @@ class Player {
     }
 
     public static boolean addToStates(State state){
-        //System.err.println("Test!");
-        //System.err.println("state: ");
-        //state.show();
 
-        mone++;
+        //mone++;
 
         boolean pass = false;
 
@@ -709,45 +704,13 @@ class Player {
             if(((betterIngredients && betterSpellsUsed) || (sameIngredients && sameSpellsUsed) 
             || (betterIngredients && sameSpellsUsed) || (sameIngredients && betterSpellsUsed)) && state.score >= st.score && state.depth <= st.depth){
                 states.remove(i);
-                //System.err.println("replace!");
-                //System.err.println();
-                /*System.err.println("state: ");
-                state.show();
-                System.err.println("st: ");
-                st.show();*/
-                //System.err.println("result 2: replace");
-                //System.err.println();
                 return true;
             }
             else if(sameSpellsUsed && sameIngredients && state.score >= st.score && state.depth <= st.depth) {
                 states.remove(i);
-                //System.err.println("replace 2!");
-                //System.err.println();
-                /*System.err.println("state: ");
-                state.show();
-                System.err.println("st: ");
-                st.show();*/
-                //System.err.println("result 2: replace");
-                //System.err.println();
                 return true;
             }
         }
-
-        if(!pass){
-            //System.err.println("result 2: don't add");
-            //System.err.println();
-            /*System.err.println("state: ");
-            state.show();
-            for (int i = states.size() - 1; i > -1; i--) {
-                State st = states.get(i);
-                System.err.println("st: ");
-                st.show();
-            }*/
-            return pass;
-        }
-
-        //System.err.println("result 2: add");
-        //System.err.println();
 
         return pass;
     }
