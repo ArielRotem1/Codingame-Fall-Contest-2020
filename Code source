@@ -144,6 +144,10 @@ class State{
             if(this.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i)) res += 0.01;
         }
 
+        for (int i = Player.startSpellsLearndUsedIndex; i < Player.startSpellsLearndUsedIndex + Player.spellsToLearnSize; i++) {
+            if(this.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i)) res += 0.01;
+        }
+
         return  Math.pow(0.95, this.depth) * res;
     }
 
@@ -158,7 +162,7 @@ class State{
         System.err.println();
         System.err.println();
         System.err.println("spellsUsed: ");
-        for (int i = 0; i < Player.mySpellsSize; i++) {
+        for (int i = Player.startSpellsLearndUsedIndex; i < Player.startSpellsLearndUsedIndex + Player.spellsToLearnSize; i++) {
             System.err.print(this.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i) + ", ");
         }
         System.err.println();
@@ -190,6 +194,10 @@ class Player {
     public static int opSpellsSize;
     public static int spellsToLearnSize = 6;
     public static int ordersSize = 5;
+
+    public static int startOrdersIndex;
+    public static int startSpellsLearndIndex;
+    public static int startSpellsLearndUsedIndex;
 
     public static long startTime;
     public static int depth = 12;
@@ -311,6 +319,9 @@ class Player {
                 }
             }
 
+            startOrdersIndex = mySpellsSize;
+            startSpellsLearndIndex = startOrdersIndex + ordersSize;
+            startSpellsLearndUsedIndex = startSpellsLearndIndex + spellsToLearnSize;
 
             states = new ArrayList<State>();
             //mone = 0;
@@ -500,7 +511,7 @@ class Player {
                 if(start) command = order.output();
 
                 BitSet spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed = (BitSet) currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clone();
-                spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.set(i + mySpellsSize);
+                spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.set(i + startOrdersIndex);
 
                 int[] newIngr = addIngredients(currState.ingredients, order.ingredients);
 
@@ -519,7 +530,6 @@ class Player {
             if(resEval > bestPrice){
                 bestPrice = resEval;
                 bestState = currState;
-                
             }
 
             //CAST
@@ -532,7 +542,7 @@ class Player {
                     while(newIngr != null){
                         BitSet spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed = (BitSet) currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clone();
                         spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clear(0, mySpellsSize);
-                        spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clear(mySpellsSize + ordersSize + spellsToLearnSize, mySpellsSize + ordersSize + spellsToLearnSize + spellsToLearnSize);
+                        spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clear(startSpellsLearndUsedIndex, startSpellsLearndUsedIndex + spellsToLearnSize);
                         spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.set(i);
 
                         State newState = new State(currState.score, newIngr, spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed, 
@@ -574,60 +584,9 @@ class Player {
             }
 
             //LEARN
-            /*for (int i = 0; i < spellsToLearnSize; i++) {
-                LearnSpell spell = spellsToLearn.get(i);
-                //i have LEARND this spell so I can CAST it now
-                if(currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i + mySpellsSize + ordersSize)){
-                    //I CASTED the spell already
-                    if(currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i + mySpellsSize + ordersSize + spellsToLearnSize)){
-                        int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
-                        while(newIngr != null){
-                            String command = currState.command;
-                            if(start) command = "REST";
-
-                            BitSet spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed = (BitSet) currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clone();
-                            spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clear(0, mySpellsSize);
-                            spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clear(mySpellsSize + ordersSize + spellsToLearnSize, mySpellsSize + ordersSize + spellsToLearnSize + spellsToLearnSize);
-                            spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.set(i + mySpellsSize + ordersSize + spellsToLearnSize);
-
-                            State newState = new State(currState.score, newIngr, spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed, 
-                            command, currState.depth + 2);
-                            boolean isAdded = addToStates(newState);
-                            if(isAdded){
-                                nextLevel.add(newState);
-                            }
-
-                            if(!spell.repeatable) break;
-
-                            newIngr = addIngredients(newIngr, spell.ingredients);
-                        }
-                    }
-                    else{
-                        int times = 1;
-                        int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
-                        while(newIngr != null){
-                            String command = currState.command;
-                            if(start) command = spell.output();
-
-                            BitSet spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed = (BitSet) currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clone();
-                            spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.set(i + mySpellsSize + ordersSize + spellsToLearnSize);
-
-                            State newState = new State(currState.score, newIngr, spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed, 
-                            command, currState.depth + 1);
-                            boolean isAdded = addToStates(newState);
-                            if(isAdded){
-                                nextLevel.add(newState);
-                            }
-
-                            times++;
-
-                            if(!spell.repeatable) break;
-
-                            newIngr = addIngredients(newIngr, spell.ingredients);
-                        }
-                    }
-                }
-                else{
+            if(start){
+                for (int i = 0; i < spellsToLearnSize; i++) {
+                    LearnSpell spell = spellsToLearn.get(i);
                     //Try to learn this spell
                     if(spell.tomeIndex > currState.ingredients[0]){
                         //I don't have enough blues to pay for it
@@ -642,8 +601,7 @@ class Player {
                         if(start) command = spell.output();
 
                         BitSet spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed = (BitSet) currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clone();
-
-                        spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.set(i + mySpellsSize + ordersSize);
+                        spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.set(i + startSpellsLearndIndex);
 
                         State newState = new State(currState.score, newIngr, spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed, 
                         command, currState.depth + 1);
@@ -653,7 +611,64 @@ class Player {
                         }
                     }
                 }
-            }*/
+            }
+            else{
+                for (int i = 0; i < spellsToLearnSize; i++) {
+                    LearnSpell spell = spellsToLearn.get(i);
+                    //i have LEARND this spell so I can CAST it now
+                    if(currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i + startSpellsLearndIndex)){
+                        //I CASTED the spell already
+                        if(currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i + startSpellsLearndUsedIndex)){
+                            int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
+                            while(newIngr != null){
+                                String command = currState.command;
+                                if(start) command = "REST";
+
+                                BitSet spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed = (BitSet) currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clone();
+                                spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clear(0, mySpellsSize);
+                                spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clear(startSpellsLearndUsedIndex, startSpellsLearndUsedIndex + spellsToLearnSize);
+                                spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.set(i + startSpellsLearndUsedIndex);
+
+                                State newState = new State(currState.score, newIngr, spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed, 
+                                command, currState.depth + 2);
+                                boolean isAdded = addToStates(newState);
+                                if(isAdded){
+                                    nextLevel.add(newState);
+                                }
+
+                                if(!spell.repeatable) break;
+
+                                newIngr = addIngredients(newIngr, spell.ingredients);
+                            }
+                        }
+                        else{
+                            int times = 1;
+                            int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
+                            while(newIngr != null){
+                                String command = currState.command;
+                                if(start) command = spell.output();
+
+                                BitSet spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed = (BitSet) currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clone();
+                                spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.set(i + startSpellsLearndUsedIndex);
+
+                                State newState = new State(currState.score, newIngr, spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed, 
+                                command, currState.depth + 1);
+                                boolean isAdded = addToStates(newState);
+                                if(isAdded){
+                                    nextLevel.add(newState);
+                                }
+
+                                times++;
+
+                                if(!spell.repeatable) break;
+
+                                newIngr = addIngredients(newIngr, spell.ingredients);
+                            }
+                        }
+                    }
+                }
+            }
+            
 
 
             if(que.isEmpty()){
@@ -704,7 +719,7 @@ class Player {
 
             boolean worseIngredients = true, sameIngredients = true, betterIngredients = true;
             boolean worseSpellsUsed = true, sameSpellsUsed = true, betterSpellsUsed = true;
-            //boolean worseSpellsLearndUsed = true, sameSpellsLearndUsed = true, betterSpellsLearndUsed = true;
+            boolean worseSpellsLearndUsed = true, sameSpellsLearndUsed = true, betterSpellsLearndUsed = true;
 
             //check ingredients
             for(int j = 0; j < 4; j++){
@@ -741,7 +756,7 @@ class Player {
             }
 
             //check spellLearndUsed
-            /*for(int j = mySpellsSize + ordersSize; j < spellsToLearnSize + mySpellsSize + ordersSize; j++){
+            for(int j = startSpellsLearndUsedIndex; j < spellsToLearnSize + startSpellsLearndUsedIndex; j++){
                 if(st.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(j) && state.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(j) == false){
                     sameSpellsLearndUsed = false;
                     worseSpellsLearndUsed = false;
@@ -755,7 +770,7 @@ class Player {
             if(sameSpellsLearndUsed){
                 betterSpellsLearndUsed = false;
                 worseSpellsLearndUsed = false;
-            }*/
+            }
 
             if(state.score <= st.score && state.depth >= st.depth && 
             ((worseIngredients && sameSpellsUsed) || (sameIngredients && worseSpellsUsed) ||
@@ -780,12 +795,8 @@ class Player {
             }
 
 
-            if(((betterIngredients && betterSpellsUsed) || (sameIngredients && sameSpellsUsed) 
-            || (betterIngredients && sameSpellsUsed) || (sameIngredients && betterSpellsUsed)) && state.score >= st.score && state.depth <= st.depth){
-                states.set(i, state);
-                return true;
-            }
-            else if(sameSpellsUsed && sameIngredients && state.score >= st.score && state.depth <= st.depth) {
+            if(((betterIngredients && betterSpellsUsed) || (betterIngredients && sameSpellsUsed) || (sameIngredients && betterSpellsUsed))
+             && state.score >= st.score && state.depth <= st.depth){
                 states.set(i, state);
                 return true;
             }
@@ -797,7 +808,6 @@ class Player {
 
         return pass;
     }
-
 
     public static String randomAction(State state){
         List<String> commands = new ArrayList<String>();
