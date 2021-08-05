@@ -139,16 +139,24 @@ class State{
 
 
     public double evaluate(){
-        return this.score + this.ingredients[0] * 0.1 + this.ingredients[1] * 0.2 + 
+        double res = this.score + this.ingredients[0] * 0.1 + this.ingredients[1] * 0.2 + 
         this.ingredients[2] * 0.3 + this.ingredients[3] * 0.4;
+
+        for (int i = 0; i < Player.mySpellsSize; i++) {
+            if(this.spellsUsed.get(i)) res += 0.01;
+        }
+
+        // Math.pow(0.95, this.depth) * 
+
+        return res;
     }
 
     public void show(){
         System.err.println();
         System.err.println("score: " + score);
+        System.err.println("depth: " + depth);
         System.err.println("ingredients: ");
         for(int i = 0; i < 4; i++){
-            System.err.println();
             System.err.print(this.ingredients[i] + ", ");
         }
         System.err.println();
@@ -193,9 +201,11 @@ class Player {
     public static int depth = 12;
     public static double[] values = {1, 2, 3, 4};
 
+    public static int mone = 0;
+
     public static int N = 20;
     public static int learn = 10;
-
+ 
     public static int timeToEnd = 50;
 
     public static int ordersLeftToMe = 6;
@@ -309,6 +319,7 @@ class Player {
 
 
             states = new ArrayList<State>();
+            mone = 0;
             String output = Sim(me);
 
             boolean hasLearn = false;
@@ -514,14 +525,16 @@ class Player {
                 State newState = new State(currState.score + order.price, newIngr, (BitSet) currState.spellsUsed.clone(),
                 ordersDeliverd, command, currState.depth + 1);
 
-                if(!hasBetterOrEqualState(newState)){
+                if(addToStates(newState)){
                     states.add(newState);
                     nextLevel.add(newState);
                 }
             }
 
-            if(Math.pow(0.95, currState.depth) * currState.score > bestPrice){
-                bestPrice = Math.pow(0.95, currState.depth) * currState.score;
+            double resEval = currState.evaluate();
+
+            if(resEval > bestPrice){
+                bestPrice = resEval;
                 bestState = currState;
                 
             }
@@ -529,18 +542,17 @@ class Player {
             //CAST
             for (int i = 0; i < mySpellsSize; i++) {
                 Spell spell = mySpells.get(i);
+                String command = currState.command;
                 if(currState.spellsUsed.get(i)){
-                    String command = currState.command;
                     if(start) command = "REST";
                     int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
                     while(newIngr != null){
-
                         BitSet spellsUsed = new BitSet(mySpellsSize);
                         spellsUsed.set(i);
 
                         State newState = new State(currState.score, newIngr, spellsUsed,
                         (BitSet) currState.ordersDeliverd.clone(), command, currState.depth + 2);
-                        if(!hasBetterOrEqualState(newState)){
+                        if(addToStates(newState)){
                             states.add(newState);
                             nextLevel.add(newState);
                         }
@@ -554,7 +566,6 @@ class Player {
                     int times = 1;
                     int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
                     while(newIngr != null){
-                        String command = currState.command;
                         if(start) command = spell.output(times);
 
                         BitSet spellsUsed = (BitSet) currState.spellsUsed.clone();
@@ -563,7 +574,7 @@ class Player {
 
                         State newState = new State(currState.score, newIngr, spellsUsed,
                         (BitSet) currState.ordersDeliverd.clone(), command, currState.depth + 1);
-                        if(!hasBetterOrEqualState(newState)){
+                        if(addToStates(newState)){
                             states.add(newState);
                             nextLevel.add(newState);
                         }
@@ -615,33 +626,130 @@ class Player {
         return resIngr;
     }
 
-    public static boolean hasBetterOrEqualState(State state){
-        for (State st : states) {
-            if(st.depth > state.depth || st.score < state.score) continue;
-            boolean same = true;
+    public static boolean addToStates(State state){
+        //System.err.println("Test!");
+        //System.err.println("state: ");
+        //state.show();
+
+        mone++;
+
+        boolean pass = false;
+
+        for (int i = states.size() - 1; i > -1; i--) {
+            State st = states.get(i);
+
+            boolean worseIngredients = true;
+            boolean sameIngredients = true;
+            boolean betterIngredients = true;
 
             //check ingredients
-            for(int i = 0; i < 4; i++){
-                if(st.ingredients[i] < state.ingredients[i]){
-                    same = false;
-                    break;
+            for(int j = 0; j < 4; j++){
+                if(st.ingredients[j] > state.ingredients[j]){
+                    betterIngredients = false;
+                    sameIngredients = false;
+                }
+                else if(st.ingredients[j] < state.ingredients[j]){
+                    worseIngredients = false;
+                    sameIngredients = false;
                 }
             }
 
-            if(!same) continue;
+            if(sameIngredients){
+                betterIngredients = false;
+                worseIngredients = false;
+            }
+
+            boolean worseSpellsUsed = true;
+            boolean sameSpellsUsed = true;
+            boolean betterSpellsUsed = true;
 
             //check spellsUsed
-            for(int i = 0; i < mySpellsSize; i++){
-                if(st.spellsUsed.get(i) && state.spellsUsed.get(i) == false){
-                    same = false;
-                    break;
+            for(int j = 0; j < mySpellsSize; j++){
+                if(st.spellsUsed.get(j) && state.spellsUsed.get(j) == false){
+                    sameSpellsUsed = false;
+                    worseSpellsUsed = false;
+                }
+                else if(st.spellsUsed.get(j) == false && state.spellsUsed.get(j)){
+                    betterSpellsUsed = false;
+                    sameSpellsUsed = false;
                 }
             }
 
-            if(same) return true;
+            if(sameSpellsUsed){
+                betterSpellsUsed = false;
+                worseSpellsUsed = false;
+            }
+
+            if(state.score <= st.score && state.depth >= st.depth && 
+            ((worseIngredients && sameSpellsUsed) || (sameIngredients && worseSpellsUsed) ||
+            (sameIngredients && sameSpellsUsed) || (worseIngredients && worseSpellsUsed))) {
+                pass = false;
+                break;
+            }
+            else if(state.score < st.score && state.depth == st.depth && ((sameIngredients && sameSpellsUsed) || (worseIngredients && worseSpellsUsed))) {
+                pass = false;
+                break;
+            }
+            else if(state.score == st.score && state.depth > st.depth && ((sameIngredients && sameSpellsUsed) || (worseIngredients && worseSpellsUsed))) {
+                pass = false;
+                break;
+            }
+
+            if((betterIngredients || betterSpellsUsed || (!sameSpellsUsed && !worseSpellsUsed) || (!sameIngredients && !worseIngredients)) && 
+        	(!worseIngredients || !worseSpellsUsed)){
+                pass = true;
+            }
+            else if(((sameSpellsUsed && sameIngredients)  || 
+        		(sameIngredients && worseSpellsUsed) || 
+        		(sameSpellsUsed && worseIngredients)) && (state.score > st.score || state.depth < st.depth)) {
+                pass = true;
+            }
+
+
+            if(((betterIngredients && betterSpellsUsed) || (sameIngredients && sameSpellsUsed) 
+            || (betterIngredients && sameSpellsUsed) || (sameIngredients && betterSpellsUsed)) && state.score >= st.score && state.depth <= st.depth){
+                states.remove(i);
+                //System.err.println("replace!");
+                //System.err.println();
+                /*System.err.println("state: ");
+                state.show();
+                System.err.println("st: ");
+                st.show();*/
+                //System.err.println("result 2: replace");
+                //System.err.println();
+                return true;
+            }
+            else if(sameSpellsUsed && sameIngredients && state.score >= st.score && state.depth <= st.depth) {
+                states.remove(i);
+                //System.err.println("replace 2!");
+                //System.err.println();
+                /*System.err.println("state: ");
+                state.show();
+                System.err.println("st: ");
+                st.show();*/
+                //System.err.println("result 2: replace");
+                //System.err.println();
+                return true;
+            }
         }
 
-        return false;
+        if(!pass){
+            //System.err.println("result 2: don't add");
+            //System.err.println();
+            /*System.err.println("state: ");
+            state.show();
+            for (int i = states.size() - 1; i > -1; i--) {
+                State st = states.get(i);
+                System.err.println("st: ");
+                st.show();
+            }*/
+            return pass;
+        }
+
+        //System.err.println("result 2: add");
+        //System.err.println();
+
+        return pass;
     }
 
 
