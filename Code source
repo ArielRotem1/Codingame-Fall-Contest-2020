@@ -208,7 +208,7 @@ class Player {
 
     //public static int mone = 0;
 
-    public static int N = 15;
+    public static int N = 20;
     public static int learn = 10;
  
     public static int timeToEnd = 50;
@@ -491,6 +491,7 @@ class Player {
         boolean start = true;
 
         int moneStates = 0;
+        int moneDepth = 0;
 
         List<State> nextLevel = new ArrayList<State>();
 
@@ -589,42 +590,12 @@ class Player {
             
 
             //LEARN
-            if(start){
-                for (int i = 0; i < spellsToLearnSize; i++) {
-                    LearnSpell spell = spellsToLearn.get(i);
-                    //Try to learn this spell
-                    if(spell.tomeIndex > currState.ingredients[0]){
-                        //I don't have enough blues to pay for it
-                        continue;
-                    }
-
-                    int[] newIngr = Arrays.copyOf(currState.ingredients, 4);
-                    newIngr[0] -= spell.tomeIndex;
-                    newIngr[0] += spell.taxCount;
-                    if(isValid(newIngr)){
-                        String command = currState.command;
-                        if(start) command = spell.output();
-
-                        BitSet spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed = (BitSet) currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clone();
-                        spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.set(i + startSpellsLearndIndex);
-
-                        State newState = new State(currState.score, newIngr, spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed, 
-                        command, currState.depth + 1);
-                        boolean isAdded = addToStates(newState);
-                        if(isAdded){
-                            nextLevel.add(newState);
-                        }
-                    }
-                }
-            }
-            else{
-                boolean passedOver = false;
-                for (int i = 0; i < spellsToLearnSize && !passedOver; i++) {
-                    //i have LEARND this spell so I can CAST it now
-                    if(currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i + startSpellsLearndIndex)){
-                        LearnSpell spell = spellsToLearn.get(i);
-                        //I CASTED the spell already
-                        if(currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i + startSpellsLearndUsedIndex)){
+            for (int i = 0; i < spellsToLearnSize; i++) {
+                LearnSpell spell = spellsToLearn.get(i);
+                //i have LEARND this spell so I can CAST it now
+                if(currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i + startSpellsLearndIndex)){
+                    //I CASTED the spell already
+                    if(currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i + startSpellsLearndUsedIndex)){
                             int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
                             while(newIngr != null){
                                 String command = currState.command;
@@ -647,7 +618,7 @@ class Player {
                                 newIngr = addIngredients(newIngr, spell.ingredients);
                             }
                         }
-                        else{
+                    else{
                             int times = 1;
                             int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
                             while(newIngr != null){
@@ -671,7 +642,29 @@ class Player {
                                 newIngr = addIngredients(newIngr, spell.ingredients);
                             }
                         }
-                        passedOver = true;
+                }
+                else{
+                    //Try to learn this spell
+                    if(spell.tomeIndex > currState.ingredients[0]){
+                        //I don't have enough blues to pay for it
+                        continue;
+                    }
+                    int[] newIngr = Arrays.copyOf(currState.ingredients, 4);
+                    newIngr[0] -= spell.tomeIndex;
+                    newIngr[0] += spell.taxCount;
+                    if(isValid(newIngr)){
+                        String command = currState.command;
+                        if(start) command = spell.output();
+
+                        BitSet spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed = (BitSet) currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clone();
+                        spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.set(i + startSpellsLearndIndex);
+                        
+                        State newState = new State(currState.score, newIngr, spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed, 
+                        command, currState.depth + 1);
+                        boolean isAdded = addToStates(newState);
+                        if(isAdded){
+                            nextLevel.add(newState);
+                        }
                     }
                 }
             }
@@ -681,11 +674,15 @@ class Player {
             if(que.isEmpty()){
                 Collections.sort(nextLevel, new Sortbyroll());
 
-                for(int i = 0; i < Math.min(N, nextLevel.size()); i++){
+                int size = nextLevel.size();//(int) Math.round(nextLevel.size() * 0.7);
+                int len = Math.min(N, size);
+
+                for(int i = 0; i < len; i++){
                     que.add(nextLevel.get(i));
                 }
 
                 nextLevel = new ArrayList<State>();
+                moneDepth++;
             }
 
             start = false;
@@ -693,6 +690,7 @@ class Player {
 
         System.err.println();
         System.err.println("moneStates: " + moneStates);
+        System.err.println("moneDepth: " + moneDepth);
         System.err.println("bestPrice: " + bestPrice);
         System.err.println();
 
