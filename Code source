@@ -140,15 +140,15 @@ class State{
 
 
     public double evaluate(){
-        double res = this.score + this.ingredients[0] * 0.1 + this.ingredients[1] * 0.2 + 
-        this.ingredients[2] * 0.3 + this.ingredients[3] * 0.4;
+        double res = this.score + this.ingredients[0] * 1 + this.ingredients[1] * 2 + 
+        this.ingredients[2] * 3 + this.ingredients[3] * 4;
 
-        for (int i = 0; i < Player.mySpellsSize; i++) {
+        /*for (int i = 0; i < Player.mySpellsSize; i++) {
             if(this.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i)) res += 0.01;
-        }
+        }*/
 
-        for (int i = Player.startSpellsLearndUsedIndex; i < Player.startSpellsLearndUsedIndex + Player.spellsToLearnSize; i++) {
-            if(this.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i)) res += 0.01;
+        for (int i = Player.startSpellsLearndIndex; i < Player.startSpellsLearndIndex + Player.spellsToLearnSize; i++) {
+            if(this.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i)) res += 0.5;
         }
 
         return  Math.pow(0.95, this.depth) * res;
@@ -223,6 +223,8 @@ class Player {
     public static boolean haveOrangeRep = false;
     public static boolean haveYellowRep = false;
 
+    public static boolean reduceYellow = false;
+
     public static List<State> states;
 
     public static void main(String args[]) {
@@ -262,6 +264,7 @@ class Player {
                         if(ingredients[2] < 0) haveOrangeRep = true;
                         if(ingredients[3] < 0) haveYellowRep = true;
                     }
+                    if(ingredients[3] < 0) reduceYellow = true;
                     mySpells.add(new Spell(actionId, ingredients, castable, repeatable));
                 }
                 else if(actionType.equals("OPPONENT_CAST")){
@@ -314,6 +317,19 @@ class Player {
             //opponent.show();
 
             if(learn > 0){
+                if(!reduceYellow){
+                    for(LearnSpell spell : spellsToLearn){
+                        if(spell.tomeIndex > me.ingredients[0]) continue;
+                        if(spell.ingredients[3] < 0){
+                            System.out.println("LEARN " + spell.id + " Hmm...");
+                            reduceYellow = true;
+                            learn--;
+                            break;
+                        }
+                    }
+
+                    if(reduceYellow) continue;
+                }
                 int ID = WhatLearn(me.ingredients[0]);
                 if(ID != -1){
                     System.out.println("LEARN " + ID + " Hmm...");
@@ -519,7 +535,7 @@ class Player {
 
                 int[] newIngr = addIngredients(currState.ingredients, order.ingredients);
 
-                State newState = new State(currState.score + order.price, newIngr, spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed, 
+                State newState = new State(currState.score + 1.1 + order.price, newIngr, spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed, 
                 command, currState.depth + 1);
 
                 boolean isAdded = addToStates(newState);
