@@ -772,31 +772,49 @@ class Player {
                 worseSpellsLearndUsed = false;
             }
 
-            if(state.score <= st.score && state.depth >= st.depth && 
-            ((worseIngredients && sameSpellsUsed) || (sameIngredients && worseSpellsUsed) ||
-            (sameIngredients && sameSpellsUsed) || (worseIngredients && worseSpellsUsed))) {
-                return false;
-            }
-            else if(state.score < st.score && state.depth == st.depth && ((sameIngredients && sameSpellsUsed) || (worseIngredients && worseSpellsUsed))) {
-                return false;
-            }
-            else if(state.score == st.score && state.depth > st.depth && ((sameIngredients && sameSpellsUsed) || (worseIngredients && worseSpellsUsed))) {
+            if(state.score <= st.score && state.depth >= st.depth &&
+            ((sameIngredients && sameSpellsUsed && sameSpellsLearndUsed)  || 
+            (sameIngredients && sameSpellsUsed && worseSpellsLearndUsed)  || 
+            (sameIngredients && worseSpellsUsed && sameSpellsLearndUsed) || 
+            (sameIngredients && worseSpellsUsed && worseSpellsLearndUsed) ||
+            (worseIngredients && sameSpellsUsed && sameSpellsLearndUsed) ||
+            (worseIngredients && sameSpellsUsed && worseSpellsLearndUsed) ||
+            (worseIngredients && worseSpellsUsed && sameSpellsLearndUsed) ||
+            (worseIngredients && worseSpellsUsed && worseSpellsLearndUsed))) {
                 return false;
             }
 
-            if((betterIngredients || betterSpellsUsed || (!sameSpellsUsed && !worseSpellsUsed) || (!sameIngredients && !worseIngredients)) && 
-        	(!worseIngredients || !worseSpellsUsed)){
+            if(betterIngredients || betterSpellsUsed || betterSpellsLearndUsed || 
+            (!worseSpellsLearndUsed && !sameSpellsLearndUsed && !betterSpellsLearndUsed) ||
+            (!worseSpellsUsed && !sameSpellsUsed && !betterSpellsUsed) || 
+            (!worseIngredients && !sameIngredients && !betterIngredients)){
                 pass = true;
             }
-            else if(((sameSpellsUsed && sameIngredients)  || 
-        		(sameIngredients && worseSpellsUsed) || 
-        		(sameSpellsUsed && worseIngredients)) && (state.score > st.score || state.depth < st.depth)) {
+            else if(((sameIngredients && sameSpellsUsed && sameSpellsLearndUsed)  || 
+                    (sameIngredients && sameSpellsUsed && worseSpellsLearndUsed)  || 
+                    (sameIngredients && worseSpellsUsed && sameSpellsLearndUsed) || 
+                    (sameIngredients && worseSpellsUsed && worseSpellsLearndUsed) ||
+                    (worseIngredients && sameSpellsUsed && sameSpellsLearndUsed) ||
+                    (worseIngredients && sameSpellsUsed && worseSpellsLearndUsed) ||
+                    (worseIngredients && worseSpellsUsed && sameSpellsLearndUsed) ||
+                    (worseIngredients && worseSpellsUsed && worseSpellsLearndUsed)) && (state.score > st.score || state.depth < st.depth)) {
                 pass = true;
             }
-
-
-            if(((betterIngredients && betterSpellsUsed) || (betterIngredients && sameSpellsUsed) || (sameIngredients && betterSpellsUsed))
-             && state.score >= st.score && state.depth <= st.depth){
+                //0 0 1
+            if(((sameIngredients && sameSpellsUsed && betterSpellsLearndUsed) ||
+                //0 1 0
+                (sameIngredients && betterSpellsUsed && sameSpellsLearndUsed) ||
+                //0 1 1
+                (sameIngredients && betterSpellsUsed && betterSpellsLearndUsed) ||
+                //1 0 0
+                (betterIngredients && sameSpellsUsed && sameSpellsLearndUsed) ||
+                //1 0 1
+                (betterIngredients && sameSpellsUsed && betterSpellsLearndUsed) ||
+                //1 1 0
+                (betterIngredients && betterSpellsUsed && sameSpellsLearndUsed) ||
+                //1 1 1
+                (betterIngredients && betterSpellsUsed && betterSpellsUsed))
+                && state.score >= st.score && state.depth <= st.depth){
                 states.set(i, state);
                 return true;
             }
