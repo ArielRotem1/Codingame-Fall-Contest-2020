@@ -77,6 +77,9 @@ class LearnSpell{
     public String output(){
         return "LEARN " + this.id;
     }
+    public String output(int times){
+        return "CAST " + this.id + " " + times;
+    }
 
     public void show(){
         System.err.println();
@@ -205,7 +208,7 @@ class Player {
 
     //public static int mone = 0;
 
-    public static int N = 20;
+    public static int N = 15;
     public static int learn = 10;
  
     public static int timeToEnd = 50;
@@ -583,6 +586,8 @@ class Player {
                 }
             }
 
+            
+
             //LEARN
             if(start){
                 for (int i = 0; i < spellsToLearnSize; i++) {
@@ -596,7 +601,7 @@ class Player {
                     int[] newIngr = Arrays.copyOf(currState.ingredients, 4);
                     newIngr[0] -= spell.tomeIndex;
                     newIngr[0] += spell.taxCount;
-                    if(newIngr != null){
+                    if(isValid(newIngr)){
                         String command = currState.command;
                         if(start) command = spell.output();
 
@@ -613,10 +618,11 @@ class Player {
                 }
             }
             else{
-                for (int i = 0; i < spellsToLearnSize; i++) {
-                    LearnSpell spell = spellsToLearn.get(i);
+                boolean passedOver = false;
+                for (int i = 0; i < spellsToLearnSize && !passedOver; i++) {
                     //i have LEARND this spell so I can CAST it now
                     if(currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i + startSpellsLearndIndex)){
+                        LearnSpell spell = spellsToLearn.get(i);
                         //I CASTED the spell already
                         if(currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(i + startSpellsLearndUsedIndex)){
                             int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
@@ -646,7 +652,7 @@ class Player {
                             int[] newIngr = addIngredients(currState.ingredients, spell.ingredients);
                             while(newIngr != null){
                                 String command = currState.command;
-                                if(start) command = spell.output();
+                                if(start) command = spell.output(times);
 
                                 BitSet spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed = (BitSet) currState.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.clone();
                                 spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.set(i + startSpellsLearndUsedIndex);
@@ -665,6 +671,7 @@ class Player {
                                 newIngr = addIngredients(newIngr, spell.ingredients);
                             }
                         }
+                        passedOver = true;
                     }
                 }
             }
@@ -706,6 +713,17 @@ class Player {
 
         if(mone > 10) return null;
         return resIngr;
+    }
+
+    public static boolean isValid(int[] ingredients){
+        int mone = 0;
+
+        for (int i = 0; i < 4; i++) {
+            if(ingredients[i] < 0) return false;
+            mone += ingredients[i];
+        }
+
+        return mone <= 10;
     }
 
     public static boolean addToStates(State state){
