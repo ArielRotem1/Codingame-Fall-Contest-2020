@@ -175,20 +175,6 @@ class State{
     }
 }
 
-
-class Sortbyroll implements Comparator<State>
-{
-    // Used for sorting in ascending order of
-    // roll number
-    public int compare(State a, State b)
-    {
-        double res = a.evaluate() - b.evaluate();
-        if(res > 0) return -1;
-        if(res < 0) return 1;
-        return 0;
-    }
-}
-
 class Player {
 
     public static List<Order> orders;
@@ -529,7 +515,7 @@ class Player {
         int moneStates = 0;
         int moneDepth = 0;
 
-        List<State> nextLevel = new ArrayList<State>();
+        TreeMap<Double, List<State>> nextLevel = new TreeMap<Double, List<State>>(Collections.reverseOrder());
 
         while(!que.isEmpty()){
             State currState = que.remove();
@@ -572,10 +558,37 @@ class Player {
                                 System.err.println();
                                 return bestState.command + " gg";
                             }
-                            else if(newState.myScore < prevOpponentScore)
-                                return "REST";
+                            else if(newState.myScore == prevOpponentScore){
+                                double evalNewState = newState.evaluate();
+
+                                List<State> li = nextLevel.get(evalNewState);
+                                List<State> list;
+                                if(li == null){
+                                    list = new ArrayList<State>();
+                                }
+                                else{
+                                    list = new ArrayList<State>(li);
+                                }
+
+                                list.add(newState);
+                                nextLevel.put(evalNewState, list);
+                            }
                         }
-                        nextLevel.add(newState);
+                        else{
+                            double evalNewState = newState.evaluate();
+
+                            List<State> li = nextLevel.get(evalNewState);
+                            List<State> list;
+                            if(li == null){
+                                list = new ArrayList<State>();
+                            }
+                            else{
+                                list = new ArrayList<State>(li);
+                            }
+
+                            list.add(newState);
+                            nextLevel.put(evalNewState, list);
+                        }
                     }
                 }
             }
@@ -604,7 +617,18 @@ class Player {
                         command, currState.depth + 2);
                         boolean isAdded = addToStates(newState);
                         if(isAdded){
-                            nextLevel.add(newState);
+                            double eval = newState.evaluate();
+                            List<State> li = nextLevel.get(eval);
+                            List<State> list;
+                            if(li == null){
+                                list = new ArrayList<State>();
+                            }
+                            else{
+                                list = new ArrayList<State>(li);
+                            }
+
+                            list.add(newState);
+                            nextLevel.put(eval, list);
                         }
 
                         if(!spell.repeatable) break;
@@ -626,7 +650,18 @@ class Player {
 
                         boolean isAdded = addToStates(newState);
                         if(isAdded){
-                            nextLevel.add(newState);
+                            double eval = newState.evaluate();
+                            List<State> li = nextLevel.get(eval);
+                            List<State> list;
+                            if(li == null){
+                                list = new ArrayList<State>();
+                            }
+                            else{
+                                list = new ArrayList<State>(li);
+                            }
+
+                            list.add(newState);
+                            nextLevel.put(eval, list);
                         }
 
                         times++;
@@ -661,7 +696,18 @@ class Player {
                                 command, currState.depth + 2);
                                 boolean isAdded = addToStates(newState);
                                 if(isAdded){
-                                    nextLevel.add(newState);
+                                    double eval = newState.evaluate();
+                                    List<State> li = nextLevel.get(eval);
+                                    List<State> list;
+                                    if(li == null){
+                                        list = new ArrayList<State>();
+                                    }
+                                    else{
+                                        list = new ArrayList<State>(li);
+                                    }
+
+                                    list.add(newState);
+                                    nextLevel.put(eval, list);
                                 }
 
                                 if(!spell.repeatable) break;
@@ -683,7 +729,18 @@ class Player {
                                 command, currState.depth + 1);
                                 boolean isAdded = addToStates(newState);
                                 if(isAdded){
-                                    nextLevel.add(newState);
+                                    double eval = newState.evaluate();
+                                    List<State> li = nextLevel.get(eval);
+                                    List<State> list;
+                                    if(li == null){
+                                        list = new ArrayList<State>();
+                                    }
+                                    else{
+                                        list = new ArrayList<State>(li);
+                                    }
+
+                                    list.add(newState);
+                                    nextLevel.put(eval, list);
                                 }
 
                                 times++;
@@ -714,7 +771,18 @@ class Player {
                         command, currState.depth + 1);
                         boolean isAdded = addToStates(newState);
                         if(isAdded){
-                            nextLevel.add(newState);
+                            double eval = newState.evaluate();
+                            List<State> li = nextLevel.get(eval);
+                            List<State> list;
+                            if(li == null){
+                                list = new ArrayList<State>();
+                            }
+                            else{
+                                list = new ArrayList<State>(li);
+                            }
+
+                            list.add(newState);
+                            nextLevel.put(eval, list);
                         }
                     }
                 }
@@ -723,16 +791,28 @@ class Player {
 
 
             if(que.isEmpty()){
-                Collections.sort(nextLevel, new Sortbyroll());
-
                 int size = nextLevel.size();//(int) Math.round(nextLevel.size() * 0.7);
                 int len = Math.min(N, size);
+                int mone = 0;
 
-                for(int i = 0; i < len; i++){
-                    que.add(nextLevel.get(i));
+                for(Map.Entry<Double, List<State>> entry : nextLevel.entrySet()) {
+                    Double key = entry.getKey();
+                    //System.err.println("key: " + key);
+                    List<State> value = entry.getValue();
+                    for(State stateInList : value){
+                        mone++;
+                        if(mone == len){
+                            break;
+                        }
+                        que.add(stateInList);
+                    }
+
+                    if(mone == len){
+                        break;
+                    }
                 }
 
-                nextLevel = new ArrayList<State>();
+                nextLevel = new TreeMap<Double, List<State>>(Collections.reverseOrder());
                 moneDepth++;
             }
 
