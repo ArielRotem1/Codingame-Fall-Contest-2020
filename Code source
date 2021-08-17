@@ -123,8 +123,12 @@ class State{
         this.littleBounsUsed = littleBounsUsed;
         this.ordersLeft = ordersLeft;
 
-        if(Player.opponentSim) this.stateEval = this.evaluate2();
-        else this.stateEval = this.evaluate();
+        if(Player.opponentSim){
+            this.stateEval = this.evaluate2();
+        }
+        else{
+            this.stateEval = this.evaluate();
+        }
 
         this.stateEval += parentEval;
 
@@ -137,7 +141,7 @@ class State{
         this.ingredients[2] * 3 + this.ingredients[3] * 4;
 
         if(this.ingredients[3] > Player.maxYellows || this.ingredients[2] > 9){
-            res -= 10;
+            res -= 15;
         }
 
         for (byte i = Player.startOrdersIndex; i < Player.startOrdersIndex + Player.ordersSize; i++) {
@@ -197,10 +201,10 @@ class TakePlace{
 
 class Player {
 
-    public static Order[] orders;
+    public static Order[] orders = new Order[5];
     public static List<Spell> mySpells;
     public static List<Spell> opSpells;
-    public static LearnSpell[] spellsToLearn;
+    public static LearnSpell[] spellsToLearn = new LearnSpell[6];
     public static byte mySpellsSize;
     public static byte opSpellsSize;
     public static byte spellsToLearnSize;
@@ -220,7 +224,7 @@ class Player {
 
     //public static int mone = 0;
 
-    public static short N = 300;
+    public static short N = 400;
     public static byte learn = 7;
 
     public static byte depthLimit = 15;
@@ -255,10 +259,8 @@ class Player {
             mySpellsSize = 0;
             opSpellsSize = 0;
             spellsToLearnSize = 0;
-            orders = new Order[5];
             mySpells = new ArrayList<Spell>();
             opSpells = new ArrayList<Spell>();
-            spellsToLearn = new LearnSpell[6];
 
             short actionCount = in.nextShort(); // the number of spells and recipes in play
             startTime = System.currentTimeMillis();
@@ -300,6 +302,8 @@ class Player {
                     spellsToLearnSize++;
                 }
             }
+
+            spellsToLearnSize = 2;
 
             State me = null, opponent = null;
 
@@ -446,7 +450,7 @@ class Player {
                 System.gc();
                 System.err.println(Runtime.getRuntime().freeMemory());
                 byte ID = spellsToLearn[0].id;
-                nextLevel = new State[3500];
+                nextLevel = new State[4000];
                 learn--;
                 System.out.println("LEARN " + ID + " Hmm...");
                 continue;
@@ -540,7 +544,7 @@ class Player {
         int moneDepth = 0;
 
         //LEARN
-        for (byte i = 0; i < 2; i++) {
+        for (byte i = 0; i < spellsToLearnSize; i++) {
             LearnSpell spell = spellsToLearn[i];
             //Try to learn this spell
             if(spell.tomeIndex > state.ingredients[0]){
@@ -935,7 +939,7 @@ class Player {
         }
 
         //LEARN
-        for (byte i = 0; i < 2; i++) {
+        for (byte i = 0; i < spellsToLearnSize; i++) {
             LearnSpell spell = spellsToLearn[i];
             //Try to learn this spell
             if(spell.tomeIndex > state.ingredients[0]){// || !spell.repeatable){
@@ -1219,158 +1223,9 @@ class Player {
         return resIngr;
     }
 
-    /*public static boolean isValid(byte[] ingredients){
-        byte mone = 0;
-
-        for (byte i = 0; i < 4; i++) {
-            if(ingredients[i] < 0) return false;
-            mone += ingredients[i];
-        }
-
-        if(mone > 10) return false;
-        return true;
-    }*/
 
     public static boolean addToStates(State state){
-
         return true;
-
-        /*if(states.contains(state.hashCode())){
-            //System.err.println("has!!!!");
-            return false;
-        }
-        else{
-            states.add(state.hashCode());
-            return true;
-        }*/
-
-
-        //mone++;
-
-        /*boolean pass = false;
-
-        boolean worseIngredients = true, sameIngredients = true, betterIngredients = true;
-        boolean worseSpellsUsed = true, sameSpellsUsed = true, betterSpellsUsed = true;
-        boolean worseSpellsLearndUsed = true, sameSpellsLearndUsed = true, betterSpellsLearndUsed = true;
-
-        for (short i = (short) (indexStates - 1); i > -1; i--) {
-            State st = states[i];
-
-            worseIngredients = true;
-            sameIngredients = true;
-            betterIngredients = true;
-            worseSpellsUsed = true;
-            sameSpellsUsed = true;
-            betterSpellsUsed = true;
-            worseSpellsLearndUsed = true;
-            sameSpellsLearndUsed = true;
-            betterSpellsLearndUsed = true;
-
-            //check ingredients
-            for(byte j = 0; j < 4; j++){
-                if(st.ingredients[j] > state.ingredients[j]){
-                    betterIngredients = false;
-                    sameIngredients = false;
-                }
-                else if(st.ingredients[j] < state.ingredients[j]){
-                    worseIngredients = false;
-                    sameIngredients = false;
-                }
-            }
-
-            if(sameIngredients){
-                betterIngredients = false;
-                worseIngredients = false;
-            }
-
-            //check spellsUsed
-            for(byte j = 0; j < mySpellsSize; j++){
-                if(st.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(j) && state.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(j) == false){
-                    sameSpellsUsed = false;
-                    worseSpellsUsed = false;
-                }
-                else if(st.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(j) == false && state.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(j)){
-                    betterSpellsUsed = false;
-                    sameSpellsUsed = false;
-                }
-            }
-
-            if(sameSpellsUsed){
-                betterSpellsUsed = false;
-                worseSpellsUsed = false;
-            }
-
-            //check spellLearndUsed
-            for(byte j = startSpellsLearndIndex; j < spellsToLearnSize + startSpellsLearndIndex; j++){
-                if(st.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(j) == false && state.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(j)){
-                    sameSpellsLearndUsed = false;
-                    worseSpellsLearndUsed = false;
-                }
-                else if(st.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(j) && state.spellsUsedAndOrdersDeliverdAndSpellsLearndAndSpellsLearndUsed.get(j) == false){
-                    betterSpellsLearndUsed = false;
-                    sameSpellsLearndUsed = false;
-                }
-            }
-
-            if(sameSpellsLearndUsed){
-                betterSpellsLearndUsed = false;
-                worseSpellsLearndUsed = false;
-            }
-
-            if(state.score <= st.score && state.depth >= st.depth &&
-            ((sameIngredients && sameSpellsUsed && sameSpellsLearndUsed)  || 
-            (sameIngredients && sameSpellsUsed && worseSpellsLearndUsed)  || 
-            (sameIngredients && worseSpellsUsed && sameSpellsLearndUsed) || 
-            (sameIngredients && worseSpellsUsed && worseSpellsLearndUsed) ||
-            (worseIngredients && sameSpellsUsed && sameSpellsLearndUsed) ||
-            (worseIngredients && sameSpellsUsed && worseSpellsLearndUsed) ||
-            (worseIngredients && worseSpellsUsed && sameSpellsLearndUsed) ||
-            (worseIngredients && worseSpellsUsed && worseSpellsLearndUsed))) {
-                return false;
-            }
-
-            if(betterIngredients || betterSpellsUsed || betterSpellsLearndUsed || 
-            (!worseSpellsLearndUsed && !sameSpellsLearndUsed && !betterSpellsLearndUsed) ||
-            (!worseSpellsUsed && !sameSpellsUsed && !betterSpellsUsed) || 
-            (!worseIngredients && !sameIngredients && !betterIngredients)){
-                pass = true;
-            }
-            else if(((sameIngredients && sameSpellsUsed && sameSpellsLearndUsed)  || 
-                    (sameIngredients && sameSpellsUsed && worseSpellsLearndUsed)  || 
-                    (sameIngredients && worseSpellsUsed && sameSpellsLearndUsed) || 
-                    (sameIngredients && worseSpellsUsed && worseSpellsLearndUsed) ||
-                    (worseIngredients && sameSpellsUsed && sameSpellsLearndUsed) ||
-                    (worseIngredients && sameSpellsUsed && worseSpellsLearndUsed) ||
-                    (worseIngredients && worseSpellsUsed && sameSpellsLearndUsed) ||
-                    (worseIngredients && worseSpellsUsed && worseSpellsLearndUsed)) && (state.score > st.score || state.depth < st.depth)) {
-                pass = true;
-            }
-                //0 0 1
-            if(((sameIngredients && sameSpellsUsed && betterSpellsLearndUsed) ||
-                //0 1 0
-                (sameIngredients && betterSpellsUsed && sameSpellsLearndUsed) ||
-                //0 1 1
-                (sameIngredients && betterSpellsUsed && betterSpellsLearndUsed) ||
-                //1 0 0
-                (betterIngredients && sameSpellsUsed && sameSpellsLearndUsed) ||
-                //1 0 1
-                (betterIngredients && sameSpellsUsed && betterSpellsLearndUsed) ||
-                //1 1 0
-                (betterIngredients && betterSpellsUsed && sameSpellsLearndUsed) ||
-                //1 1 1
-                (betterIngredients  && betterSpellsUsed && betterSpellsUsed))
-                && state.score >= st.score && state.depth <= st.depth){
-                states[i] = state;
-                return true;
-            }
-        }
-
-        if(pass){
-            states[indexStates] = state;
-            indexStates++;
-        }
-
-        return pass;*/
     }
 
 
@@ -1443,11 +1298,6 @@ class Player {
         }
 
         if(bestPrice != 0){
-            System.err.println();
-            System.err.println("moneStates op: " + moneStates);
-            System.err.println("moneDepth: " + moneDepth);
-            System.err.println("bestPrice: " + bestPrice);
-            System.err.println();
             return bestState;
         }
 
@@ -1512,7 +1362,7 @@ class Player {
         }
 
         //LEARN
-        for (byte i = 0; i < 2; i++) {
+        for (byte i = 0; i < spellsToLearnSize; i++) {
             LearnSpell spell = spellsToLearn[i];
             //Try to learn this spell
             if(spell.tomeIndex > state.ingredients[0]){// || !spell.repeatable){
@@ -1570,13 +1420,13 @@ class Player {
         while(queIndex > -1){
             State currState = que[queIndex];
             queIndex--;
-            if(currState.ordersLeft == 0 || currState.depth >= 3){
+            if(currState.ordersLeft == 0 || currState.depth >= 5){
                 if(currState.stateEval > bestPrice){
                     bestPrice = currState.stateEval;
                     bestState = currState;
                 }
 
-                if(currState.depth < 3 && currState.score > prevMyScore + 4){
+                if(currState.depth < 5 && currState.score > prevMyScore + 4){
                     bestPrice = currState.stateEval;
                     bestState = currState;
                     break;
