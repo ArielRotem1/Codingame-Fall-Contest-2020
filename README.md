@@ -1,2 +1,2 @@
-# Fall-Challenge-2020
-Fall Challenge 2020
+# Codingame Fall Challenge 2020 Contest
+My code for Codingame Fall Challenge 2020 contest.
